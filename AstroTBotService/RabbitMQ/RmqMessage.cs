@@ -9,7 +9,7 @@ namespace AstroTBotService.RMQ
         public string Id { get; set; }
 
         [ProtoMember(2)]
-        public DateTime BirthDateTime { get; set; }
+        public DateTimeOffset BirthDateTime { get; set; }
 
         [ProtoMember(3)]
         public DateTime StartDateTime { get; set; }

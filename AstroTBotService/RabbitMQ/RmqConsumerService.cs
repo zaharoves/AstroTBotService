@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client;
-using AstroTBotService.RMQ;
 using ProtoBuf;
 using AstroTBotService.TBot;
 using Telegram.Bot.Polling;
@@ -20,12 +19,12 @@ namespace AstroTBotService.RMQ
         private readonly string _routingKey;
 
         private readonly IUpdateHandler _updateHandler;
-        private ITBotClientHelper _tBotClientHelper;
+        private IMainMenuHelper _tBotClientHelper;
 
         public RmqConsumerService(
             IOptions<RmqConfig> rmqConfig, 
             IUpdateHandler updateHandler,
-            ITBotClientHelper tBotClientHelper)        
+            IMainMenuHelper tBotClientHelper)        
         {
             _factory = new ConnectionFactory()
             {
@@ -93,7 +92,7 @@ namespace AstroTBotService.RMQ
                     _channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
                     Console.WriteLine($" [x] Подтверждено: '{message.Id}'");
 
-                    _tBotClientHelper.SendMessageAsync(message.Id, message.MessageText);
+                    //await _tBotClientHelper.SendMessageAsync(message.Id, message.MessageText);
                 };
 
                 // Начинаем потребление сообщений

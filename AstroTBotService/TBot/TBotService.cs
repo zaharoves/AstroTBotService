@@ -1,9 +1,5 @@
 ﻿using Telegram.Bot.Polling;
 using Telegram.Bot;
-using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types;
-using System.Threading;
-using Telegram.Bot.Types.ReplyMarkups;
 
 namespace AstroTBotService.TBot
 {

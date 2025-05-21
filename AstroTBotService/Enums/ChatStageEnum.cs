@@ -1,16 +1,18 @@
-﻿namespace AstroTBotService.TBot
+﻿namespace AstroTBotService.Enums
 {
-    public enum TBotStageEnum
+    public enum ChatStageEnum
     {
-        Begin,
-        Start,
+        MainMenu,
+
+        YearIntervalPicker,
         YearPicker,
         MonthPicker,
         DayPicker,
         HourPicker,
         MinutePicker,
-        GmtPicker,
-        ConfirmPicker,
+        TimeZonePicker,
+        ConfirmBirthday,
+
         BeginProcessing,
         EndProcessing
     }

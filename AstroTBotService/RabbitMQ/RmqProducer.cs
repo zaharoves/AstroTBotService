@@ -1,7 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
-using System.Text.Json;
-using System.Text;
 using ProtoBuf;
 
 namespace AstroTBotService.RMQ

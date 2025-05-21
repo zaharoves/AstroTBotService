@@ -3,225 +3,511 @@ using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types;
 using Telegram.Bot;
 using System.Globalization;
-using System.Diagnostics;
 using Telegram.Bot.Polling;
 using AstroTBotService.RMQ;
+using AstroTBotService.Entities;
+using AstroTBotService.Enums;
+using AstroTBotService.Constans;
 
 namespace AstroTBotService.TBot
 {
     public class TBotHandler : IUpdateHandler
     {
-        private Dictionary<long, (TBotStageEnum Stage, DateTime BirthDate)> _stageDict = new Dictionary<long, (TBotStageEnum, DateTime)>();
+        public static Dictionary<long, (ChatStageEnum Stage, DatePickerData DatePickerData)> ChatsDict = new Dictionary<long, (ChatStageEnum, DatePickerData)>();
 
         //rmqMessageId, chatId 
         public static Dictionary<string, long> RmqDict = new Dictionary<string, long>();
 
-
-        //private readonly IServiceProvider _serviceProvider;
         private readonly ITelegramBotClient _botClient;
-        private readonly ITBotDatePicker _tBotDatePicker;
+        private readonly IMainMenuHelper _mainMenuHelper;
+        private readonly IDatePicker _datePicker;
         private readonly IRmqProducer _rmqProducer;
+
+        public bool IsChatExict(long chatId)
+        {
+            return ChatsDict.TryGetValue(chatId, out var chatInfo) && chatInfo.DatePickerData?.DateTime != null;
+        }
 
         public TBotHandler(
             ITelegramBotClient botClient,
-            IRmqProducer rmqProducer,
-            //IServiceProvider serviceProvider,
-            ITBotDatePicker tBotDatePicker)
+            IMainMenuHelper mainMenuHelper,
+            IDatePicker tBotDatePicker,
+            IRmqProducer rmqProducer)
         {
             _botClient = botClient;
+            _mainMenuHelper = mainMenuHelper;
+            _datePicker = tBotDatePicker;
             _rmqProducer = rmqProducer;
-            //_serviceProvider = serviceProvider;
-            _tBotDatePicker = tBotDatePicker;
         }
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             if (update?.Message != null && update?.Message?.Type == MessageType.Text)
             {
-                await HandleMessageAsync(update.Message);
+                await HandleMessageAsync(update);
             }
             else if (update?.CallbackQuery != null)
             {
-                await HandleCallbackAsync(botClient, update.CallbackQuery);
+                await HandleCallbackAsync(botClient, update);
             }
         }
 
-        private async Task HandleMessageAsync(Message message)
+        private async Task HandleMessageAsync(Update update)
         {
+            var message = update.Message;
+
             var chatId = message.Chat.Id;
 
-            if (message.Text.ToLower() == "/start")
-            {
-                await SendStartMessageAsync(_botClient, message);
+            //if (message.Text.ToLower() == Constants.ButtonCommands.IGNORE)
+            //{
+            //    return;
+            //}
 
-                SetChatStage(message.Chat.Id, TBotStageEnum.YearPicker);
+            if (message.Text.ToLower() == Constants.MessageCommands.START)
+            {
+                //await SendStartMessageAsync(_botClient, message);
+                await _mainMenuHelper.SendMainMenu(
+                    _botClient,
+                    message.Chat.Id,
+                    IsChatExict(message.Chat.Id));
+
+                SetChatStage(message.Chat.Id, ChatStageEnum.MainMenu);
                 return;
             }
 
-            if (GetChatStage(chatId) == TBotStageEnum.MonthPicker)
+            if (message.Text.ToLower() == Constants.ButtonCommands.SAVE_BIRTHDAY)
             {
-                if (int.TryParse(message.Text.ToLower().Trim(), out int year) && year >= 1900 && year <= DateTime.Now.Year)
-                {
-                    await _tBotDatePicker.SendMonthPicker(_botClient, message.Chat.Id, year, "Выберите месяц Вашего рождения:");
-                }
-                else
-                {
-                    var forceReplyMarkup = new ForceReplyMarkup() { Selective = true };
+                //await SendStartMessageAsync(_botClient, message);
+                await _mainMenuHelper.SendMainMenu(
+                    _botClient,
+                    update.CallbackQuery.Message.Chat.Id,
+                    IsChatExict(message.Chat.Id));
 
-                    await _botClient.SendMessage(
-                        chatId: chatId,
-                        text: $"Некорректное значение.\nВведите год Вашего рождения (от 1900 до {DateTime.Now.Year}):",
-                        replyMarkup: forceReplyMarkup);
-                }
-
-                SetChatStage(message.Chat.Id, TBotStageEnum.DayPicker);
+                SetChatStage(message.Chat.Id, ChatStageEnum.MainMenu);
                 return;
             }
+
+            //if (GetChatStage(chatId) == TBotStageEnum.MonthPicker)
+            //{
+            //    if (int.TryParse(message.Text.ToLower().Trim(), out int year) && year >= 1900 && year <= DateTime.Now.Year)
+            //    {
+            //        var dateTimeInfo = new DateTimeOffset(
+            //            new DateTime(year, 1, 1), 
+            //            TimeSpan.Zero);
+
+            //        await _tBotDatePicker.SendMonthPicker(_botClient, message.Chat.Id, dateTimeInfo, "Выберите месяц Вашего рождения:");
+            //    }
+            //    else
+            //    {
+            //        var forceReplyMarkup = new ForceReplyMarkup() { Selective = true };
+
+            //        await _botClient.SendMessage(
+            //            chatId: chatId,
+            //            text: $"Некорректное значение.\nВведите год Вашего рождения (от 1900 до {DateTime.Now.Year}):",
+            //            replyMarkup: forceReplyMarkup);
+
+            //        SetChatStage(message.Chat.Id, TBotStageEnum.Start);
+            //        return;
+            //    }
+
+            //    SetChatStage(message.Chat.Id, TBotStageEnum.DayPicker);
+            //    return;
+            //}
         }
 
-        private async Task HandleCallbackAsync(ITelegramBotClient botClient, CallbackQuery callbackQuery)
+        private async Task HandleCallbackAsync(ITelegramBotClient botClient, Update update)
         {
-            if (callbackQuery.Data == null)
+            var callbackQuery = update.CallbackQuery;
+
+            if (callbackQuery?.Data == null ||
+                callbackQuery?.Data == Constants.ButtonCommands.IGNORE ||
+                callbackQuery?.Message == null)
             {
                 return;
             }
 
-            long chatId = callbackQuery.Message.Chat.Id;
-            int messageId = callbackQuery.Message.MessageId;
+            var chatId = callbackQuery.Message.Chat.Id;
+            var messageData = callbackQuery.Data;
 
-            if (GetChatStage(chatId) == TBotStageEnum.YearPicker)
+            _datePicker.TryParseDateTimePicker(callbackQuery, out var datePickerData);
+
+            switch (messageData)
             {
-                var forceReplyMarkup = new ForceReplyMarkup() { Selective = true };
+                case Constants.ButtonCommands.TO_MAIN_MENU:
+                    await _mainMenuHelper.SendMainMenu(
+                        botClient,
+                        chatId,
+                        IsChatExict(chatId));
 
-                await botClient.SendMessage(
-                    chatId: chatId,
-                    text: "Введите год Вашего рождения",
-                    replyMarkup: forceReplyMarkup);
-
-                SetChatStage(callbackQuery.Message.Chat.Id, TBotStageEnum.MonthPicker);
-            }
-            else if (callbackQuery.Data.StartsWith("dateTimePicker:"))
-            {
-                if (!_tBotDatePicker.TryParseDateTimePicker(callbackQuery, out int year, out int month, out int day, out int hour, out int minute, out int gmtOffset))
-                {
+                    SetChatStage(chatId, ChatStageEnum.MainMenu);
                     return;
-                }
-
-                switch (GetChatStage(chatId))
-                {
-                    case TBotStageEnum.DayPicker:
-                        await _tBotDatePicker.SendDayPicker(
-                            botClient,
-                            callbackQuery,
-                            year,
-                            month,
-                            $"Выберите день Вашего рождения ({CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)} {year} г.)");
-
-                        SetChatStage(callbackQuery.Message.Chat.Id, TBotStageEnum.HourPicker);
-                        break;
-                    case TBotStageEnum.HourPicker:
-                        await _tBotDatePicker.SendHourPicker(
-                            botClient,
-                            callbackQuery,
-                            year,
-                            month,
-                            day,
-                            $"Выберите часы Вашего рождения ({day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)} {year} г.)");
-
-                        SetChatStage(callbackQuery.Message.Chat.Id, TBotStageEnum.MinutePicker);
-                        break;
-                    case TBotStageEnum.MinutePicker:
-                        await _tBotDatePicker.SendMinutePicker(
-                            botClient,
-                            callbackQuery,
-                            year,
-                            month,
-                            day,
-                            hour,
-                            $"Выберите минуты Вашего рождения ({day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)} {year} г. {hour}:XX)");
-
-                        SetChatStage(callbackQuery.Message.Chat.Id, TBotStageEnum.GmtPicker);
-                        break;
-                    case TBotStageEnum.GmtPicker:
-                        var selectedDate = new DateTime(year, month, day, hour, minute, 0);
-
-                        await _tBotDatePicker.SendGmtPicker(
-                            botClient,
-                            callbackQuery,
-                            year,
-                            month,
-                            day,
-                            hour,
-                            minute,
-                            $"Ваш день рождения: {day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)} {year}г. {hour}:{minute}\nВыберите часовой пояс вашего рождения:");
-
-                        SetChatStage(callbackQuery.Message.Chat.Id, TBotStageEnum.ConfirmPicker);
-                        SetChatBirthDate(callbackQuery.Message.Chat.Id, selectedDate);
-                        break;
-                    case TBotStageEnum.ConfirmPicker:
-                        var gmtSign = gmtOffset >= 0 ? "+" : "-";
-
-                        await _tBotDatePicker.SendConfirmDate(
-                            botClient,
-                            callbackQuery,
-                            year,
-                            month,
-                            day,
-                            hour,
-                            minute,
-                            gmtOffset,
-                            $"День Вашего рождения: {day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)} {year}г. {hour}:{minute}. [GMT{gmtSign}{gmtOffset}]");
-
-                        SetChatStage(callbackQuery.Message.Chat.Id, TBotStageEnum.BeginProcessing);
-                        break;
-                    default:
-                        break;
-                }
             }
-            else if (GetChatStage(chatId) == TBotStageEnum.YearPicker || callbackQuery.Data.ToLower() == "start:")
+
+
+
+            //if (GetChatStage(chatId) == TBotStageEnum.MainMenu)
+            //{
+            //    switch (messageData)
+            //    {
+            //        case "setBirthday:":
+            //            break;
+            //    }
+
+
+            //    var isChatExict = IsChatExict(chatId);
+
+            //    await _mainMenuHelper.SendMainMenu(
+            //        _botClient, 
+            //        callbackQuery.Message.Chat.Id,
+            //        isChatExict);
+
+            //    if(isChatExict)
+            //    {
+            //        SetChatStage(chatId, TBotStageEnum.MainMenu);
+            //    }
+            //    else
+            //    {
+            //        SetChatStage(chatId, TBotStageEnum.MainMenu);
+            //    }
+
+            //    return;
+            //}
+
+
+            switch (GetChatStage(chatId))
             {
-                var forceReplyMarkup = new ForceReplyMarkup() { Selective = true };
+                case ChatStageEnum.MainMenu:
+                    switch (messageData)
+                    {
+                        case Constants.ButtonCommands.SET_BIRTHDAY:
+                            await _datePicker.SendYearIntervalPicker(
+                                botClient,
+                                callbackQuery,
+                                $"Выберите год Вашего рождения:");
 
-                await botClient.SendMessage(
-                    chatId: chatId,
-                    text: "Введите год Вашего рождения",
-                    replyMarkup: forceReplyMarkup);
+                            SetChatStage(chatId, ChatStageEnum.YearIntervalPicker);
+                            break;
+                        case Constants.ButtonCommands.TODAY_FORECAST:
+                            break;
+                        case Constants.ButtonCommands.POSITIVE_FORECAST:
+                            break;
+                    }
 
-                SetChatStage(callbackQuery.Message.Chat.Id, TBotStageEnum.MonthPicker);
+                    return;
+
+                case ChatStageEnum.YearIntervalPicker:
+                    await _datePicker.SendYearPicker(
+                        botClient,
+                        callbackQuery,
+                        datePickerData,
+                        $"Выберите год Вашего рождения:");
+
+                    SetChatStage(chatId, ChatStageEnum.YearPicker);
+                    break;
+
+                case ChatStageEnum.YearPicker:
+                    await _datePicker.SendMonthPicker(
+                        botClient,
+                        callbackQuery,
+                        datePickerData,
+                        "Выберите месяц Вашего рождения:");
+
+                    SetChatStage(chatId, ChatStageEnum.MonthPicker);
+                    return;
+
+                case ChatStageEnum.MonthPicker:
+                    await _datePicker.SendDayPicker(
+                        botClient,
+                        callbackQuery,
+                        datePickerData,
+                        $"Выберите день Вашего рождения ({CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datePickerData?.DateTime?.Month ?? 1)} {datePickerData?.DateTime?.Year} г.)");
+
+                    SetChatStage(chatId, ChatStageEnum.DayPicker);
+                    break;
+
+                case ChatStageEnum.DayPicker:
+                    await _datePicker.SendHourPicker(
+                        botClient,
+                        callbackQuery,
+                        datePickerData,
+                        $"Выберите часы Вашего рождения ({datePickerData?.DateTime?.Day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datePickerData?.DateTime?.Month ?? 1)} {datePickerData?.DateTime?.Year} г.)");
+
+                    SetChatStage(chatId, ChatStageEnum.HourPicker);
+                    return;
+
+                case ChatStageEnum.HourPicker:
+                    await _datePicker.SendMinutePicker(
+                        botClient,
+                        callbackQuery,
+                        datePickerData,
+                        $"Выберите минуты Вашего рождения ({datePickerData?.DateTime?.Day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datePickerData?.DateTime?.Month ?? 1)} {datePickerData?.DateTime?.Year} г. {datePickerData?.DateTime?.Hour}:XX)");
+
+                    SetChatStage(chatId, ChatStageEnum.MinutePicker);
+                    break;
+
+                case ChatStageEnum.MinutePicker:
+                    await _datePicker.SendTimeZonePicker(
+                        botClient,
+                        callbackQuery,
+                        datePickerData,
+                        $"Выберите часовой пояс Вашего рождения ({datePickerData?.DateTime?.Day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datePickerData?.DateTime?.Month ?? 1)} {datePickerData?.DateTime?.Year} г. {datePickerData?.DateTime?.Hour}:{datePickerData?.DateTime?.Minute})");
+
+                    SetChatStage(chatId, ChatStageEnum.TimeZonePicker);
+                    return;
+
+                case ChatStageEnum.TimeZonePicker:
+                    var gmtSign = datePickerData?.GmtOffset >= TimeSpan.Zero ? "+" : "-";
+
+                    await _datePicker.SendConfirmDate(
+                        botClient,
+                        callbackQuery,
+                        datePickerData,
+                        $"День Вашего рождения: {datePickerData?.DateTime?.Day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datePickerData?.DateTime?.Month ?? 1)} {datePickerData?.DateTime?.Year}г. {datePickerData?.DateTime?.Hour}:{datePickerData?.DateTime?.Minute}. [GMT{gmtSign}{Math.Abs(datePickerData.GmtOffset.Hours)}]");
+
+                    SetChatStage(chatId, ChatStageEnum.ConfirmBirthday);
+                    return;
+
+                case ChatStageEnum.ConfirmBirthday:
+                    if (datePickerData?.IsSaveCommand ?? false)
+                    {
+                        SetDatePickerData(chatId, datePickerData);
+
+                        await _mainMenuHelper.SendMainMenu(
+                            botClient,
+                            chatId,
+                            IsChatExict(chatId));
+
+                        SetChatStage(chatId, ChatStageEnum.MainMenu);
+                    }
+                    else if (datePickerData?.IsChangeCommand ?? false)
+                    {
+                        await _datePicker.SendYearPicker(
+                            botClient,
+                            callbackQuery,
+                            datePickerData,
+                            $"Выберите год Вашего рождения:");
+
+                        SetChatStage(chatId, ChatStageEnum.YearPicker);
+                    }
+                    else if (datePickerData?.IsCancelCommand ?? false)
+                    {
+                        await _mainMenuHelper.SendMainMenu(
+                            botClient,
+                            chatId,
+                            IsChatExict(chatId));
+
+                        SetChatStage(chatId, ChatStageEnum.MainMenu);
+                    }
+
+                    return;
+                    //case TBotStageEnum.MainMenu:
+                    //    await _mainMenuHelper.SendMainMenu(
+                    //        botClient, 
+                    //        chatId, 
+                    //        IsChatExict(chatId));
+
+                    //    SetChatStage(chatId, TBotStageEnum.MainMenu);
+                    //    break;
             }
-            else if (GetChatStage(chatId) == TBotStageEnum.BeginProcessing)
-            {
-                await botClient.SendMessage(
-                    chatId: chatId,
-                    text: "В процессе расчета, подождите...",
-                    replyMarkup: null);
 
-                var inlineKeyboard = new InlineKeyboardMarkup(new[]
-                {
-                    new [] { InlineKeyboardButton.WithCallbackData("Рассчитать новую дату", $"start:") }
-                });
+            //if (messageText == "process:")
+            //{
+            //    await botClient.SendMessage(
+            //        chatId: chatId,
+            //        text: "В процессе расчета, подождите...",
+            //        replyMarkup: null);
 
-                var messageGuid = Guid.NewGuid().ToString();
-                var birthDate = GetChatBirthDate(chatId);
+            //    var inlineKeyboard = new InlineKeyboardMarkup(new[]
+            //    {
+            //            new [] { InlineKeyboardButton.WithCallbackData("Рассчитать новую дату", $"start:") }
+            //        });
 
-                var message = new RmqMessage()
-                {
-                    Id = messageGuid,
-                    BirthDateTime = birthDate,
-                    StartDateTime = DateTime.Now.AddDays(-10),
-                    EndDateTime = DateTime.Now
-                };
+            //    var messageGuid = Guid.NewGuid().ToString();
+            //    var birthDate = GetChatBirthDate(chatId);
 
-                _rmqProducer.SendMessage(messageGuid, message);
-                RmqDict.Add(messageGuid, chatId);
+            //    var message = new RmqMessage()
+            //    {
+            //        Id = messageGuid,
+            //        BirthDateTime = birthDate,
+            //        StartDateTime = DateTime.Now.AddDays(-10),
+            //        EndDateTime = DateTime.Now
+            //    };
 
-                await botClient.SendMessage(
-                    chatId: chatId,
-                    text: "Посчитано, смотри",
-                    replyMarkup: inlineKeyboard);
+            //    _rmqProducer.SendMessage(messageGuid, message);
+            //    RmqDict.Add(messageGuid, chatId);
 
-                SetChatStage(callbackQuery.Message.Chat.Id, TBotStageEnum.EndProcessing);
-            }
+            //    await botClient.SendMessage(
+            //        chatId: chatId,
+            //        text: "Посчитано, смотри",
+            //        replyMarkup: inlineKeyboard);
+
+            //    SetChatStage(chatId, TBotStageEnum.EndProcessing);
+            //}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            //if (GetChatStage(chatId) == TBotStageEnum.Start)//|| callbackQuery.Data.ToLower() == "start:"
+            //{
+            //    await _tBotDatePicker.SendYearIntervalPicker(
+            //        botClient,
+            //        callbackQuery,
+            //        $"Выберите год Вашего рождения:");
+
+            //    SetChatStage(chatId, TBotStageEnum.YearIntervalPicker);
+            //    return;
+            //}
+
+            //if (GetChatStage(chatId) == TBotStageEnum.YearIntervalPicker)
+            //{
+            //    await _tBotDatePicker.SendYearPicker(
+            //        botClient,
+            //        callbackQuery,
+            //        startYearInterval,
+            //        $"Выберите год Вашего рождения:");
+
+            //    SetChatStage(chatId, TBotStageEnum.YearPicker);
+            //    return;
+            //}
+
+            //if (GetChatStage(chatId) == TBotStageEnum.YearPicker)
+            //{
+            //    if (!int.TryParse(messageText.Trim(), out int year) && year >= 1900 && year <= DateTime.Now.Year)
+            //    {
+            //        await _tBotDatePicker.SendYearPicker(
+            //        botClient,
+            //        callbackQuery,
+            //        startYearInterval,
+            //        $"Некорректное значение.\nВведите год Вашего рождения (от 1900 до {DateTime.Now.Year}):");
+
+            //        //SetChatStage(chatId, TBotStageEnum.YearPicker);
+            //        return;
+            //    }
+
+            //    await _tBotDatePicker.SendMonthPicker(
+            //        botClient,
+            //        callbackQuery,
+            //        dateTimeOffset,
+            //        "Выберите месяц Вашего рождения:");
+
+
+            //    SetChatStage(chatId, TBotStageEnum.MonthPicker);
+            //    return;
+            //}
+
+            //if (GetChatStage(chatId) == TBotStageEnum.MonthPicker)
+            //{
+            //    await _tBotDatePicker.SendDayPicker(
+            //        botClient,
+            //        callbackQuery,
+            //        dateTimeOffset,
+            //                $"Выберите день Вашего рождения ({CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(dateTimeOffset.Month)} {dateTimeOffset.Year} г.)");
+
+            //    SetChatStage(chatId, TBotStageEnum.DayPicker);
+            //    return;
+            //}
+
+            //if (GetChatStage(chatId) == TBotStageEnum.DayPicker)
+            //{
+            //    await _tBotDatePicker.SendHourPicker(
+            //                botClient,
+            //                callbackQuery,
+            //                dateTimeOffset,
+            //                $"Выберите часы Вашего рождения ({dateTimeOffset.Day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(dateTimeOffset.Month)} {dateTimeOffset.Year} г.)");
+
+            //    SetChatStage(chatId, TBotStageEnum.HourPicker);
+            //    return;
+            //}
+
+            //if (GetChatStage(chatId) == TBotStageEnum.HourPicker)
+            //{
+            //    await _tBotDatePicker.SendMinutePicker(
+            //                botClient,
+            //                callbackQuery,
+            //                dateTimeOffset,
+            //                $"Выберите минуты Вашего рождения ({dateTimeOffset.Day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(dateTimeOffset.Month)} {dateTimeOffset.Year} г. {dateTimeOffset.Hour}:XX)");
+
+            //    SetChatStage(chatId, TBotStageEnum.MinutePicker);
+            //    return;
+            //}
+
+            //if (GetChatStage(chatId) == TBotStageEnum.MinutePicker)
+            //{
+            //    var gmtSign = dateTimeOffset.Offset >= TimeSpan.Zero ? "+" : "-";
+
+            //    await _tBotDatePicker.SendConfirmDate(
+            //        botClient,
+            //        callbackQuery,
+            //        dateTimeOffset,
+            //        $"День Вашего рождения: {dateTimeOffset.Day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(dateTimeOffset.Month)} {dateTimeOffset.Year}г. {dateTimeOffset.Hour}:{dateTimeOffset.Minute}. [GMT{gmtSign}{dateTimeOffset.Offset.Hours}]");
+
+            //    SetChatStage(chatId, TBotStageEnum.Confirm);
+            //    SetChatBirthDate(chatId, dateTimeOffset);
+
+            //    return;
+            //}
+
+            //if (GetChatStage(chatId) == TBotStageEnum.Confirm)
+            //{
+            //    if (messageText == "process:")
+            //    {
+            //        await botClient.SendMessage(
+            //        chatId: chatId,
+            //        text: "В процессе расчета, подождите...",
+            //        replyMarkup: null);
+
+            //        var inlineKeyboard = new InlineKeyboardMarkup(new[]
+            //        {
+            //            new [] { InlineKeyboardButton.WithCallbackData("Рассчитать новую дату", $"start:") }
+            //        });
+
+            //        var messageGuid = Guid.NewGuid().ToString();
+            //        var birthDate = GetChatBirthDate(chatId);
+
+            //        var message = new RmqMessage()
+            //        {
+            //            Id = messageGuid,
+            //            BirthDateTime = birthDate,
+            //            StartDateTime = DateTime.Now.AddDays(-10),
+            //            EndDateTime = DateTime.Now
+            //        };
+
+            //        _rmqProducer.SendMessage(messageGuid, message);
+            //        RmqDict.Add(messageGuid, chatId);
+
+            //        await botClient.SendMessage(
+            //            chatId: chatId,
+            //            text: "Посчитано, смотри",
+            //            replyMarkup: inlineKeyboard);
+
+            //        SetChatStage(chatId, TBotStageEnum.EndProcessing);
+            //    }
+            //    else if (messageText == "start:")
+            //    {
+            //        await _tBotDatePicker.SendYearIntervalPicker(
+            //        botClient,
+            //        callbackQuery,
+            //        $"Выберите год Вашего рождения:");
+
+            //        SetChatStage(chatId, TBotStageEnum.YearIntervalPicker);
+            //        return;
+            //    }
+            //}
         }
 
         public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -233,9 +519,9 @@ namespace AstroTBotService.TBot
         {
             var user = message?.From;
 
-            string welcomeText = $"Приветствую вас, {user.FirstName ?? string.Empty} {user.LastName ?? string.Empty}!\n\n{TBotConstants.WelcomeMessage}";
+            string welcomeText = $"Приветствую вас, {user.FirstName ?? string.Empty} {user.LastName ?? string.Empty}!\n\n{Constants.WELCOME_MESSAGE}";
 
-            var inlineKeyboard = InlineKeyboardButton.WithCallbackData("Начать", "start:");
+            var inlineKeyboard = InlineKeyboardButton.WithCallbackData("Ввести дату рождения", Constants.ButtonCommands.SET_BIRTHDAY);
 
             await botClient.SendMessage(
                 chatId: message?.Chat?.Id,
@@ -243,51 +529,51 @@ namespace AstroTBotService.TBot
                 replyMarkup: inlineKeyboard);
         }
 
-        private void SetChatStage(long chatId, TBotStageEnum stageEnum)
+        private void SetChatStage(long chatId, ChatStageEnum stageEnum)
         {
-            if (_stageDict.TryGetValue(chatId, out var chatInfo))
+            if (ChatsDict.TryGetValue(chatId, out var outDatePickerData))
             {
-                _stageDict[chatId] = (stageEnum, _stageDict[chatId].BirthDate);
+                ChatsDict[chatId] = (stageEnum, ChatsDict[chatId].DatePickerData);
             }
             else
             {
-                _stageDict.Add(chatId, (stageEnum, DateTime.MinValue));
+                ChatsDict.Add(chatId, (stageEnum, new DatePickerData()));
             }
         }
 
-        private TBotStageEnum GetChatStage(long chatId)
+        private ChatStageEnum GetChatStage(long chatId)
         {
-            if (_stageDict.TryGetValue(chatId, out var chatInfo))
+            if (ChatsDict.TryGetValue(chatId, out var outDatePickerData))
             {
-                return chatInfo.Stage;
+                return outDatePickerData.Stage;
             }
             else
             {
-                return TBotStageEnum.Begin;
+                return ChatStageEnum.MainMenu;
             }
         }
 
-        private void SetChatBirthDate(long chatId, DateTime birthDate)
+        private void SetDatePickerData(long chatId, DatePickerData datePickerData)
         {
-            if (_stageDict.TryGetValue(chatId, out var chatInfo))
+            if (ChatsDict.TryGetValue(chatId, out var outDatePickerData))
             {
-                _stageDict[chatId] = (_stageDict[chatId].Stage, birthDate);
+                ChatsDict[chatId] = (ChatsDict[chatId].Stage, datePickerData);
             }
             else
             {
-                _stageDict.Add(chatId, (TBotStageEnum.Begin, birthDate));
+                ChatsDict.Add(chatId, (ChatStageEnum.MainMenu, datePickerData));
             }
         }
 
-        private DateTime GetChatBirthDate(long chatId)
+        private DatePickerData GetDatePickerData(long chatId)
         {
-            if (_stageDict.TryGetValue(chatId, out var chatInfo))
+            if (ChatsDict.TryGetValue(chatId, out var outDatePickerData))
             {
-                return chatInfo.BirthDate;
+                return outDatePickerData.DatePickerData;
             }
             else
             {
-                return DateTime.MinValue;
+                return new DatePickerData();
             }
         }
 

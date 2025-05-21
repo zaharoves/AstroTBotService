@@ -1,17 +1,7 @@
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualBasic;
-using RabbitMQ.Client;
-using System.Globalization;
-using System.Text;
-using System.Threading;
 using AstroTBotService.RMQ;
 using AstroTBotService.TBot;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
-using Telegram.Bot.Types;
-using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.ReplyMarkups;
 
 namespace AstroTBotService
 {
@@ -69,10 +59,10 @@ namespace AstroTBotService
             {
                 services.Configure<RmqConfig>(hostContext.Configuration.GetSection("RabbitMq"));
                 services.AddSingleton<ITelegramBotClient>(provider => telegramBotClient);
-                services.AddSingleton<ITBotClientHelper, TBotClientHelper>();
+                services.AddSingleton<IMainMenuHelper, MainMenuHelper>();
                 services.AddSingleton<IRmqProducer, RmqProducer>();
                 services.AddScoped<IUpdateHandler, TBotHandler>();
-                services.AddScoped<ITBotDatePicker, TBotDatePicker>();
+                services.AddScoped<IDatePicker, DatePicker>();
                 services.AddHostedService<RmqConsumerService>();
                 services.AddHostedService<TBotService>();
                 //services.AddSingleton<ISwissEphemeridService, SwissEphemeridService>();
@@ -82,37 +72,6 @@ namespace AstroTBotService
                 .Build();
 
             host.Run();
-
-            Console.Read();
-
-            //var builder = WebApplication.CreateBuilder(args);
-
-            //// Add services to the container.
-
-            //builder.Services.AddControllers();
-            //// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-            //builder.Services.AddEndpointsApiExplorer();
-            //builder.Services.AddSwaggerGen();
-
-            //var app = builder.Build();
-
-            //// Configure the HTTP request pipeline.
-            //if (app.Environment.IsDevelopment())
-            //{
-            //    //app.UseSwagger();
-            //    //app.UseSwaggerUI();
-            //}
-
-            //app.UseHttpsRedirection();
-
-            //app.UseAuthorization();
-
-
-            //app.MapControllers();
-
-            //app.Run();
         }
-        #region ô
-        #endregion
     }
 }
