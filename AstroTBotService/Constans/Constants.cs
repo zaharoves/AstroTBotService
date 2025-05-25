@@ -1,15 +1,18 @@
-﻿using System.Collections.ObjectModel;
+﻿using AstroTBotService.Enums;
+using System.Collections.ObjectModel;
 
-namespace AstroTBotService.Constans
+namespace AstroTBotService
 {
     public static class Constants
     {
         public const string WELCOME_MESSAGE = "Приветственное сообщение!";
 
-        public const string MAIN_MENU_MESSAGE = "Необходимо заполнить дату Вашего рождения.";
-        public const string MAIN_MENU_MESSAGE_BIRTHDAY = "Дата вашего рождения: {0}\nМожно запустить процесс расчета.";
+        public const string MAIN_MENU_MESSAGE = $"{Icons.Common.SUN} Необходимо заполнить дату Вашего рождения";
+        public const string MAIN_MENU_MESSAGE_BIRTHDAY = $"{Icons.Common.SCIENCE} Дата вашего рождения: \n{{0}}\n\nМожно запустить процесс расчета.";
 
         public const int START_INTERVAL_YEAR = 1900;
+        public const int YEARS_INTERVAL = 20;
+        public const int YEARS_PER_ROW = 5;
 
         public static readonly ReadOnlyCollection<(int TimeZoneInt, string Description)> TIME_ZONE_DICT =
             new ReadOnlyCollection<(int, string)>(new List<(int, string)>()
@@ -54,12 +57,60 @@ namespace AstroTBotService.Constans
             public const string SAVE_BIRTHDAY = "save_birthday";
             public const string CHANGE_BIRTHDAY = "change_birthday";
             public const string TO_MAIN_MENU = "to_main_menu";
-            
+
             public const string SET_BIRTHDAY = "set_birthday";
             public const string TODAY_FORECAST = "today_forecast";
             public const string POSITIVE_FORECAST = "positive_forecast:";
         }
 
+        public static IReadOnlyDictionary<ZodiacEnum, string> ZodiacIconDict =
+            new Dictionary<ZodiacEnum, string>
+            {
+                { ZodiacEnum.Aries, Icons.Zodiac.ARIES },
+                { ZodiacEnum.Taurus, Icons.Zodiac.TAURUS },
+                { ZodiacEnum.Gemini, Icons.Zodiac.GEMINI },
+
+                { ZodiacEnum.Cancer, Icons.Zodiac.CANCER },
+                { ZodiacEnum.Leo, Icons.Zodiac.LEO },
+                { ZodiacEnum.Virgo, Icons.Zodiac.VIRGO },
+
+                { ZodiacEnum.Libra, Icons.Zodiac.LIBRA },
+                { ZodiacEnum.Scorpio, Icons.Zodiac.SCORPIO },
+                { ZodiacEnum.Sagittarius, Icons.Zodiac.SAGITTARIUS },
+
+                { ZodiacEnum.Capricorn, Icons.Zodiac.CAPRICORN },
+                { ZodiacEnum.Aquarius, Icons.Zodiac.AQUARIUS },
+                { ZodiacEnum.Pisces, Icons.Zodiac.PISCES }
+            };
+
+        public static IReadOnlyDictionary<PlanetEnum, string> PlanetIconDict =
+            new Dictionary<PlanetEnum, string>
+            {
+                { PlanetEnum.Sun, Icons.Planets.SUN },
+                { PlanetEnum.Moon, Icons.Planets.MOON },
+
+                { PlanetEnum.Mercury, Icons.Planets.MERCURY },
+                { PlanetEnum.Venus, Icons.Planets.VENUS },
+                { PlanetEnum.Mars, Icons.Planets.MARS },
+
+                { PlanetEnum.Jupiter, Icons.Planets.JUPPITER },
+                { PlanetEnum.Saturn, Icons.Planets.SATURN },
+
+                { PlanetEnum.Uran, Icons.Planets.URAN },
+                { PlanetEnum.Neptune, Icons.Planets.NEPTUNE },
+                { PlanetEnum.Pluto, Icons.Planets.PLUTO }
+            };
+
+        public static IReadOnlyDictionary<AspectEnum, string> AspectIconDict =
+            new Dictionary<AspectEnum, string>
+            {
+                { AspectEnum.None, string.Empty },
+                { AspectEnum.Conjunction, Icons.Aspects.CONJUCTION },
+                { AspectEnum.Sextile, Icons.Aspects.SEXTILE },
+                { AspectEnum.Square, Icons.Aspects.SQUARE },
+                { AspectEnum.Trine, Icons.Aspects.TRINE },
+                { AspectEnum.Opposition, Icons.Aspects.OPPOSITION }
+            };
 
         public static class Icons
         {
@@ -114,7 +165,7 @@ namespace AstroTBotService.Constans
                 /// <summary>
                 /// 90 Angles
                 /// </summary>
-                public const string SQUARE = "◻";
+                public const string SQUARE = "☐";
 
                 /// <summary>
                 /// 120 Angles
@@ -129,9 +180,14 @@ namespace AstroTBotService.Constans
 
             public static class Common
             {
+                public const string RETRO = "Ⓡ";
+                public const string ANGLES = "°";
+                public const string MINUTES = "'";
+
                 public const string CHOOSED = "✅";
                 public const string REJECTED = "❌";
                 public const string EDIT = "✏️";
+                public const string SAVE = "💾";
 
                 public const string WARNING_RED = "❗";
                 public const string WARNING_WHITE = "❕";
@@ -143,7 +199,30 @@ namespace AstroTBotService.Constans
 
                 public const string NEXT = "➡️";
                 public const string PREVIOUS = "⬅️";
+
+                public const string SCIENCE = "⚛️";
+                public const string SUN = "🔅";
+
+                public const string RED_CIRCLE = "🔴";
+                public const string ORANGE_CIRCLE = "🟠";
+                public const string YELLOW_CIRCLE = "🟡";
+                public const string GREEN_CIRCLE = "🟢";
+                public const string BLUE_CIRCLE = "🔵";
+                public const string PURPLE_CIRCLE = "🟣";
+                public const string BROWN_CIRCLE = "🟤";
+                public const string BLACK_CIRCLE = "⚫";
+                public const string WHITE_CIRCLE = "⚪";
+
+                public const string RED_SQUARE = "🟥";
+                public const string ORANGE_SQUARE = "🟧";
+                public const string YELLOW_SQUARE = "🟨";
+                public const string GREEN_SQUARE = "🟩";
+                public const string BLUE_SQUARE = "🟦";
+                public const string PURPLE_SQUARE = "🟪";
+                public const string BROWN_SQUARE = "🟫";
+                public const string BLACK_SQUARE = "⬛";
+                public const string WHITE_SQUARE = "⬜";
             }
-        }   
+        }
     }
 }

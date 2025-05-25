@@ -4,6 +4,8 @@ namespace AstroTBotService.TBot
 {
     public interface IMainMenuHelper
     {
-        public Task SendMainMenu(ITelegramBotClient botClient, long chatId, bool isBirthdateExist);
+        Task SendMainMenu(ITelegramBotClient botClient, long chatId);
+
+        Task SendMessage(long chatId, string message);
     }
 }

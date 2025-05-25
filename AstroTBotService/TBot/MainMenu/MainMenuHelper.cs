@@ -1,7 +1,7 @@
-﻿using AstroTBotService.Constans;
-using AstroTBotService.Entities;
+﻿using AstroTBotService.Entities;
 using Telegram.Bot;
 using Telegram.Bot.Types.ReplyMarkups;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace AstroTBotService.TBot
 {
@@ -15,7 +15,7 @@ namespace AstroTBotService.TBot
             _botClient = botClient;
         }
 
-        public async Task SendMainMenu(ITelegramBotClient botClient, long chatId, bool isBirthdateExist)
+        public async Task SendMainMenu(ITelegramBotClient botClient, long chatId)
         {
             var text = string.Empty;
             InlineKeyboardMarkup keyboard = null;
@@ -38,21 +38,11 @@ namespace AstroTBotService.TBot
                 replyMarkup: keyboard);
         }
 
-        //public async Task SendMessageAsync(string rmqMessageId, string messageText)
-        //{
-        //    var inlineKeyboard = new InlineKeyboardMarkup(new[]
-        //    {
-        //        new [] { InlineKeyboardButton.WithCallbackData("Рассчитать новую дату", $"setBirthday:") }
-        //    });
-
-        //    if (TBotHandler.RmqDict.TryGetValue(rmqMessageId, out var chatId))
-        //    {
-        //        await _botClient.SendMessage(
-        //            chatId: chatId,
-        //            text: messageText,
-        //            replyMarkup: inlineKeyboard);
-        //    }
-        //}
+        public static InlineKeyboardButton GetCancelButton(string buttonText = null)
+        {
+            buttonText = string.IsNullOrWhiteSpace(buttonText) ? "Отмена " : buttonText;
+            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.Icons.Common.ORANGE_CIRCLE}", $"{Constants.ButtonCommands.TO_MAIN_MENU}");
+        }
 
         private InlineKeyboardMarkup GetMainMenuKeyboard(bool isKnowBirthday, DatePickerData? datePickerData)
         {
@@ -64,7 +54,7 @@ namespace AstroTBotService.TBot
                 {
                     new [] { InlineKeyboardButton.WithCallbackData($"Изменить дату рождения", Constants.ButtonCommands.SET_BIRTHDAY), },
                     new [] { InlineKeyboardButton.WithCallbackData($"Рассчитать прогноз на сегодня", Constants.ButtonCommands.TODAY_FORECAST), },
-                    new [] { InlineKeyboardButton.WithCallbackData($"Рассчитать положительные дни", Constants.ButtonCommands.POSITIVE_FORECAST) }
+                    new [] { InlineKeyboardButton.WithCallbackData($"Рассчитать благоприятные дни", Constants.ButtonCommands.POSITIVE_FORECAST) }
                 });
             }
             else
@@ -73,12 +63,40 @@ namespace AstroTBotService.TBot
                 {
                     new []
                     {
-                        InlineKeyboardButton.WithCallbackData($"Установить день рождения", Constants.ButtonCommands.SET_BIRTHDAY)
+                        InlineKeyboardButton.WithCallbackData($"Установить дату рождения", Constants.ButtonCommands.SET_BIRTHDAY)
                     }
                 });
             }
 
             return mainKeyboard;
+        }
+
+        public async Task SendMessage(long chatId, string message)
+        {
+            try
+            {
+                if (message.Length > 4096)
+                {
+                    message = message.Substring(0, 4096);
+                }
+
+                await _botClient.SendMessage(
+                    chatId: chatId,
+                    text: message);
+            }
+            catch (Telegram.Bot.Exceptions.ApiRequestException ex)
+            {
+                Console.WriteLine($"Ошибка Telegram API при отправке сообщения в чат {chatId}: {ex.Message}");
+                Console.WriteLine($"Код ошибки: {ex.ErrorCode}"); // Например, 400 Bad Request, 403 Forbidden
+                Console.WriteLine($"Описание ошибки: {ex.Parameters}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Произошла непредвиденная ошибка при отправке сообщения в чат {chatId}: {ex.Message}");
+                Console.WriteLine($"Стек вызова: {ex.StackTrace}");
+            }
+
+            
         }
     }
 }

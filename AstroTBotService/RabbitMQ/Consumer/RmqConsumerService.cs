@@ -4,6 +4,11 @@ using RabbitMQ.Client;
 using ProtoBuf;
 using AstroTBotService.TBot;
 using Telegram.Bot.Polling;
+using Telegram.Bot;
+using System.Text;
+using CommonIcons = AstroTBotService.Constants.Icons.Common;
+using AstroTBotService.Enums;
+
 
 namespace AstroTBotService.RMQ
 {
@@ -19,12 +24,14 @@ namespace AstroTBotService.RMQ
         private readonly string _routingKey;
 
         private readonly IUpdateHandler _updateHandler;
-        private IMainMenuHelper _tBotClientHelper;
+        private IMainMenuHelper _mainMenuHelper;
+        private ITelegramBotClient _botClient;
 
         public RmqConsumerService(
-            IOptions<RmqConfig> rmqConfig, 
+            IOptions<RmqConfig> rmqConfig,
             IUpdateHandler updateHandler,
-            IMainMenuHelper tBotClientHelper)        
+            IMainMenuHelper tBotClientHelper,
+            ITelegramBotClient botClient)
         {
             _factory = new ConnectionFactory()
             {
@@ -40,7 +47,8 @@ namespace AstroTBotService.RMQ
             _routingKey = "routingKey";
 
             _updateHandler = updateHandler;
-            _tBotClientHelper = tBotClientHelper;
+            _mainMenuHelper = tBotClientHelper;
+            _botClient = botClient;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -79,11 +87,11 @@ namespace AstroTBotService.RMQ
                     {
                         message = Serializer.Deserialize<RmqMessage2>(memoryStream);
 
-                        Console.WriteLine($" [x] Received (Protobuf): Id={message.Id}, BirthDateTime={message.Id}, StartDateTime={message.MessageText}");
+                        Console.WriteLine($" [x] Received (Protobuf): Id={message.Id}");
                     }
 
                     // Имитация обработки сообщения
-                    ProcessMessage(message);
+                    var sendMessage = ConvertToString(message);
                     Console.WriteLine($" [x] Обработано: {message.Id}");
 
                     // Подтверждаем получение и обработку сообщения.
@@ -92,7 +100,10 @@ namespace AstroTBotService.RMQ
                     _channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
                     Console.WriteLine($" [x] Подтверждено: '{message.Id}'");
 
-                    //await _tBotClientHelper.SendMessageAsync(message.Id, message.MessageText);
+                    TBotHandler.RmqDict.TryGetValue(message.Id, out long chatId);
+
+                    //TODO рассчитать текст сообщения
+                    _mainMenuHelper.SendMessage(chatId, sendMessage);
                 };
 
                 // Начинаем потребление сообщений
@@ -111,10 +122,58 @@ namespace AstroTBotService.RMQ
             return Task.CompletedTask;
         }
 
-        private void ProcessMessage(RmqMessage2 message)
+        private string ConvertToString(RmqMessage2 message)
         {
-            ///
-            
+            var sb = new StringBuilder();
+
+            sb.Append($"Прогноз на {message.DateTime.ToString("dd MMMM yyyyг.")}\n");
+            sb.Append($"{new string('-', 50)}\n");
+
+            foreach (var aspect in message.Aspects)
+            {
+                int transitAngles = (int)Math.Truncate(aspect.TransitZodiacAngles);
+                string transitAnglesStr = (transitAngles.ToString().Length < 2) ? $"0{transitAngles}" : transitAngles.ToString();
+
+                int transitMinutes = (int)Math.Truncate((aspect.TransitZodiacAngles - transitAngles) * 100);
+                string transitMinutesStr = (transitMinutes.ToString().Length < 2) ? $"0{transitMinutes}" : transitMinutes.ToString();
+
+                int natalAngles = (int)Math.Truncate(aspect.NatalZodiacAngles);
+                string natalAnglesStr = (natalAngles.ToString().Length < 2) ? $"0{natalAngles}" : natalAngles.ToString();
+
+                int natalMinutes = (int)Math.Truncate((aspect.NatalZodiacAngles - natalAngles) * 100);
+                string natalMinutesStr = (natalMinutes.ToString().Length < 2) ? $"0{natalMinutes}" : natalMinutes.ToString();
+
+                var transitPlanetEnum = (PlanetEnum)Enum.Parse(typeof(PlanetEnum), aspect.TransitPlanet, true);
+                var transitPlanetIcon = Constants.PlanetIconDict[transitPlanetEnum];
+
+                var natalPlanetEnum = (PlanetEnum)Enum.Parse(typeof(PlanetEnum), aspect.NatalPlanet, true);
+                var natalPlanetIcon = Constants.PlanetIconDict[natalPlanetEnum];
+
+                var transitZodiacEnum = (ZodiacEnum)Enum.Parse(typeof(ZodiacEnum), aspect.TransitZodiac, true);
+                var transitZodiacIcon = Constants.ZodiacIconDict[transitZodiacEnum];
+
+                var natalZodiacEnum = (ZodiacEnum)Enum.Parse(typeof(ZodiacEnum), aspect.NatalZodiac, true);
+                var natalZodiacIcon = Constants.ZodiacIconDict[natalZodiacEnum];
+
+                var aspectEnum = (AspectEnum)Enum.Parse(typeof(AspectEnum), aspect.Aspect, true);
+                var aspectIcon = Constants.AspectIconDict[aspectEnum];
+
+                var transitRetroIcon = aspect.IsTransitRetro ? CommonIcons.RETRO : string.Empty;
+                var natalRetroIcon = aspect.IsNatalRetro ? CommonIcons.RETRO : string.Empty;
+
+                var transitRetroStr = aspect.IsTransitRetro ? "(R)" : string.Empty;
+                var natalRetroStr = aspect.IsNatalRetro ? "(R)" : string.Empty;
+
+                var transitStr = $"{transitPlanetIcon}{transitRetroIcon}  {transitZodiacIcon}[{transitAnglesStr}{CommonIcons.ANGLES}{transitMinutesStr}{CommonIcons.MINUTES}]";
+                var natalStr = $"{natalPlanetIcon}{natalRetroIcon}  {natalZodiacIcon}[{natalAnglesStr}{CommonIcons.ANGLES}{natalMinutesStr}{CommonIcons.MINUTES}]";
+
+                sb.Append($"{aspect.TransitPlanet}{transitRetroStr} {aspect.Aspect} {aspect.NatalPlanet}{natalRetroStr}");
+                sb.Append($"\n{transitStr}   {aspectIcon}   {natalStr}");
+                sb.Append($"\nSome Description");
+                sb.Append($"\n\n");
+            }
+
+            return sb.ToString();
         }
     }
 }

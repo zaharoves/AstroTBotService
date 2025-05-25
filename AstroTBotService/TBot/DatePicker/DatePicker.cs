@@ -2,7 +2,6 @@
 using Telegram.Bot.Types;
 using Telegram.Bot;
 using Telegram.Bot.Types.ReplyMarkups;
-using AstroTBotService.Constans;
 using AstroTBotService.Entities;
 
 namespace AstroTBotService.TBot
@@ -137,12 +136,12 @@ namespace AstroTBotService.TBot
             {
                 new []
                 {
-                    InlineKeyboardButton.WithCallbackData("Сохранить", $"{prefixCommand}:{Constants.ButtonCommands.SAVE_BIRTHDAY}"),
-                    InlineKeyboardButton.WithCallbackData("Изменить", $"{prefixCommand}:{Constants.ButtonCommands.CHANGE_BIRTHDAY}"),
+                    InlineKeyboardButton.WithCallbackData($"Сохранить {Constants.Icons.Common.GREEN_CIRCLE}", $"{prefixCommand}:{Constants.ButtonCommands.SAVE_BIRTHDAY}"),
+                    InlineKeyboardButton.WithCallbackData($"Изменить {Constants.Icons.Common.YELLOW_CIRCLE}", $"{prefixCommand}:{Constants.ButtonCommands.CHANGE_BIRTHDAY}"),
                 },
                 new []
                 {
-                    InlineKeyboardButton.WithCallbackData($"{Constants.Icons.Common.REJECTED}Отмена", $"{Constants.ButtonCommands.TO_MAIN_MENU}")
+                    MainMenuHelper.GetCancelButton()
                 }
             });
 
@@ -158,29 +157,29 @@ namespace AstroTBotService.TBot
             var dateTimePicker = new List<List<InlineKeyboardButton>>();
 
             var currentYear = DateTime.Now.Year;
-            var intervalsCount = ((currentYear - Constants.START_INTERVAL_YEAR) / 10) + 1;
+            var intervalsCount = ((currentYear - Constants.START_INTERVAL_YEAR) / Constants.YEARS_INTERVAL) + 1;
 
             //10 years per row
             for (var rowNum = 0; rowNum < intervalsCount; rowNum++)
             {
-                var startInterval = $"{Constants.START_INTERVAL_YEAR + (10 * rowNum)}";
+                var startInterval = $"{Constants.START_INTERVAL_YEAR + (Constants.YEARS_INTERVAL * rowNum)}";
                 var endInterval = rowNum == intervalsCount - 1
                     ? currentYear.ToString()
-                    : $"{Constants.START_INTERVAL_YEAR + (10 * (rowNum + 1)) - 1}";
+                    : $"{Constants.START_INTERVAL_YEAR + (Constants.YEARS_INTERVAL * (rowNum + 1)) - 1}";
 
                 var row = new List<InlineKeyboardButton>
                 {
                     InlineKeyboardButton.WithCallbackData(
                     $"{startInterval} - {endInterval}",
-                    $"{Constants.ButtonCommands.DATE_PICKER}:{Constants.START_INTERVAL_YEAR + (10 * rowNum)}")
+                    $"{Constants.ButtonCommands.DATE_PICKER}:{Constants.START_INTERVAL_YEAR + (Constants.YEARS_INTERVAL * rowNum)}")
                 };
 
                 dateTimePicker.Add(row);
             }
 
-            dateTimePicker.Add(new List<InlineKeyboardButton> 
+            dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithCallbackData($"{Constants.Icons.Common.REJECTED}Отмена", $"{Constants.ButtonCommands.TO_MAIN_MENU}")
+                MainMenuHelper.GetCancelButton()
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);
@@ -191,15 +190,16 @@ namespace AstroTBotService.TBot
             var dateTimePicker = new List<List<InlineKeyboardButton>>();
             var currentYear = DateTime.Now.Year;
 
-            //2 Rows
-            for (var rowNum = 0; rowNum < 2; rowNum++)
+            ///Max count rows <see cref="Constants.YEARS_INTERVAL"/> / <see cref="Constants.YEARS_PER_ROW"/> rows
+            for (var rowNum = 0; rowNum < Constants.YEARS_INTERVAL / Constants.YEARS_PER_ROW; rowNum++)
             {
                 var row = new List<InlineKeyboardButton>();
+                int? yearNum = 0;
 
-                //5 years per row
+                ///Count columns <see cref="Constants.YEARS_PER_ROW"/>
                 for (var columnNum = 0; columnNum < 5; columnNum++)
                 {
-                    var yearNum = datePickerData?.MinYearInterval + rowNum * 2 + columnNum;
+                    yearNum = datePickerData?.MinYearInterval + rowNum * Constants.YEARS_PER_ROW + columnNum;
 
                     if (yearNum > currentYear)
                     {
@@ -216,11 +216,16 @@ namespace AstroTBotService.TBot
                 }
 
                 dateTimePicker.Add(row);
+
+                if (yearNum > currentYear)
+                {
+                    break;
+                }
             }
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithCallbackData($"{Constants.Icons.Common.REJECTED}Отмена", $"{Constants.ButtonCommands.TO_MAIN_MENU}")
+                MainMenuHelper.GetCancelButton()
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);
@@ -250,7 +255,7 @@ namespace AstroTBotService.TBot
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithCallbackData($"{Constants.Icons.Common.REJECTED}Отмена", $"{Constants.ButtonCommands.TO_MAIN_MENU}")
+                MainMenuHelper.GetCancelButton()
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);
@@ -297,7 +302,7 @@ namespace AstroTBotService.TBot
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithCallbackData($"{Constants.Icons.Common.REJECTED}Отмена", $"{Constants.ButtonCommands.TO_MAIN_MENU}")
+                MainMenuHelper.GetCancelButton()
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);
@@ -329,7 +334,7 @@ namespace AstroTBotService.TBot
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithCallbackData($"{Constants.Icons.Common.REJECTED}Отмена", $"{Constants.ButtonCommands.TO_MAIN_MENU}")
+                MainMenuHelper.GetCancelButton()
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);
@@ -361,7 +366,7 @@ namespace AstroTBotService.TBot
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithCallbackData($"{Constants.Icons.Common.REJECTED}Отмена", $"{Constants.ButtonCommands.TO_MAIN_MENU}")
+                MainMenuHelper.GetCancelButton()
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);
@@ -388,7 +393,7 @@ namespace AstroTBotService.TBot
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithCallbackData($"{Constants.Icons.Common.REJECTED}Отмена", $"{Constants.ButtonCommands.TO_MAIN_MENU}")
+                MainMenuHelper.GetCancelButton()
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);

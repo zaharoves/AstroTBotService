@@ -13,7 +13,6 @@
         TimeZonePicker,
         ConfirmBirthday,
 
-        BeginProcessing,
-        EndProcessing
+        ProcessingResult
     }
 }
