@@ -91,13 +91,8 @@ namespace AstroTBotService.TBot
                 case Constants.ButtonCommands.TODAY_FORECAST:
                     await botClient.SendMessage(
                             chatId: chatId,
-                            text: "В процессе расчета, подождите...",
+                            text: "Прогноз на сегодня в процессе расчета, пожалуйста подождите...",
                             replyMarkup: null);
-
-                    var keyboard = new InlineKeyboardMarkup(new[]
-                    {
-                        new [] { MainMenuHelper.GetCancelButton("На главную") }
-                    });
 
                     var messageGuid = Guid.NewGuid().ToString();
 
@@ -114,13 +109,6 @@ namespace AstroTBotService.TBot
 
                     _rmqProducer.SendMessage(messageGuid, message);
                     RmqDict.Add(messageGuid, chatId);
-
-                    await botClient.SendMessage(
-                        chatId: chatId,
-                        text: "Посчитано, смотри",
-                        replyMarkup: keyboard);
-
-                    SetChatStage(chatId, ChatStageEnum.ProcessingResult);
 
                     return;
             }

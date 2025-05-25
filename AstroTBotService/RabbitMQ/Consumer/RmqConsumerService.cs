@@ -8,6 +8,7 @@ using Telegram.Bot;
 using System.Text;
 using CommonIcons = AstroTBotService.Constants.Icons.Common;
 using AstroTBotService.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 
 
 namespace AstroTBotService.RMQ
@@ -102,8 +103,13 @@ namespace AstroTBotService.RMQ
 
                     TBotHandler.RmqDict.TryGetValue(message.Id, out long chatId);
 
+                    var keyboard = new InlineKeyboardMarkup(new[]
+                    {
+                        new [] { MainMenuHelper.GetCancelButton("На главную") }
+                    });
+
                     //TODO рассчитать текст сообщения
-                    _mainMenuHelper.SendMessage(chatId, sendMessage);
+                    _mainMenuHelper.SendMessage(chatId, sendMessage, keyboard);
                 };
 
                 // Начинаем потребление сообщений

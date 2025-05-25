@@ -71,7 +71,7 @@ namespace AstroTBotService.TBot
             return mainKeyboard;
         }
 
-        public async Task SendMessage(long chatId, string message)
+        public async Task SendMessage(long chatId, string message, ReplyMarkup replyMarkup)
         {
             try
             {
@@ -82,7 +82,8 @@ namespace AstroTBotService.TBot
 
                 await _botClient.SendMessage(
                     chatId: chatId,
-                    text: message);
+                    text: message,
+                    replyMarkup: replyMarkup);
             }
             catch (Telegram.Bot.Exceptions.ApiRequestException ex)
             {

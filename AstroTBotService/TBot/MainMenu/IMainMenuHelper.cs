@@ -1,4 +1,5 @@
 ﻿using Telegram.Bot;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace AstroTBotService.TBot
 {
@@ -6,6 +7,6 @@ namespace AstroTBotService.TBot
     {
         Task SendMainMenu(ITelegramBotClient botClient, long chatId);
 
-        Task SendMessage(long chatId, string message);
+        Task SendMessage(long chatId, string message, ReplyMarkup replyMarkup);
     }
 }
