@@ -23,7 +23,7 @@ namespace AstroTBotService.RMQ
                 VirtualHost = rmqConfig.Value.VirtualHost
             };
 
-            _queueName = rmqConfig.Value.QueueName1;
+            _queueName = rmqConfig.Value.UserInfoQueue;
             _exchangeName = "exchangeName";
             _routingKey = "routingKey";
         }

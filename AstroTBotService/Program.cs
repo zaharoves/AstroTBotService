@@ -1,5 +1,9 @@
+using AstroHandlerService.Configurations;
+using AstroHandlerService.Db;
+using AstroHandlerService.Db.Providers;
 using AstroTBotService.RMQ;
 using AstroTBotService.TBot;
+using Microsoft.Extensions.Options;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 
@@ -11,8 +15,37 @@ namespace AstroTBotService
 
         public static void Main(string[] args)
         {
+            var builder = Host.CreateDefaultBuilder(args);
+
+            var host = builder.ConfigureServices((hostContext, services) =>
+            {
+                services.Configure<RmqConfig>(hostContext.Configuration.GetSection("RabbitMq"));
+                services.Configure<PostgresConfig>(hostContext.Configuration.GetSection("PostgresConfig"));
+                
+                services.AddScoped(serviceProvider =>
+                {
+                    var config = serviceProvider.GetRequiredService<IOptions<PostgresConfig>>();
+                    return new ApplicationContext(config);
+                });
+
+                services.AddTransient(provider => telegramBotClient);
+                services.AddScoped<IMainMenuHelper, MainMenuHelper>();
+                services.AddScoped<IUserProvider, UserProvider>();
+                services.AddScoped<IRmqProducer, RmqProducer>();
+                services.AddScoped<IUpdateHandler, TBotHandler>();
+                services.AddScoped<IDatePicker, DatePicker>();
+                services.AddHostedService<RmqConsumerService>();
+                services.AddHostedService<TBotService>();
+            }).Build();
+
+            host.Run();
+
+
+
+
+
             ////////////////
-            
+
             //var botName = bot.GetMe().Result.FirstName;
 
             //var cts = new CancellationTokenSource();
@@ -31,10 +64,10 @@ namespace AstroTBotService
             //);
 
             //Console.WriteLine($"Запущен бот {botName}");
-            
+
 
             /////////////////
-            
+
             //var rmqSettings = RmqSettings.CreateDefault();
             //var rmqProducer = new RmqProducer(rmqSettings);
 
@@ -50,28 +83,6 @@ namespace AstroTBotService
 
             ////////////////
 
-
-
-
-            var builder = Host.CreateDefaultBuilder(args);
-
-            var host = builder.ConfigureServices((hostContext, services) =>
-            {
-                services.Configure<RmqConfig>(hostContext.Configuration.GetSection("RabbitMq"));
-                services.AddSingleton<ITelegramBotClient>(provider => telegramBotClient);
-                services.AddSingleton<IMainMenuHelper, MainMenuHelper>();
-                services.AddSingleton<IRmqProducer, RmqProducer>();
-                services.AddScoped<IUpdateHandler, TBotHandler>();
-                services.AddScoped<IDatePicker, DatePicker>();
-                services.AddHostedService<RmqConsumerService>();
-                services.AddHostedService<TBotService>();
-                //services.AddSingleton<ISwissEphemeridService, SwissEphemeridService>();
-                //services.AddHostedService<RmqConsumerService>();
-                //services.AddHostedService<Worker>();
-            })
-                .Build();
-
-            host.Run();
         }
     }
 }

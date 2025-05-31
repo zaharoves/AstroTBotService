@@ -7,6 +7,8 @@ namespace AstroTBotService.TBot
     {
         Task SendMainMenu(ITelegramBotClient botClient, long chatId);
 
+        Task SendMainMenu(ITelegramBotClient botClient, long chatId, int editMessageId);
+
         Task SendMessage(long chatId, string message, ReplyMarkup replyMarkup);
     }
 }

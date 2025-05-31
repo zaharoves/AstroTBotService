@@ -3,8 +3,6 @@ using RabbitMQ.Client.Events;
 using RabbitMQ.Client;
 using ProtoBuf;
 using AstroTBotService.TBot;
-using Telegram.Bot.Polling;
-using Telegram.Bot;
 using System.Text;
 using CommonIcons = AstroTBotService.Constants.Icons.Common;
 using AstroTBotService.Enums;
@@ -23,16 +21,11 @@ namespace AstroTBotService.RMQ
 
         private readonly string _exchangeName;
         private readonly string _routingKey;
-
-        private readonly IUpdateHandler _updateHandler;
         private IMainMenuHelper _mainMenuHelper;
-        private ITelegramBotClient _botClient;
 
         public RmqConsumerService(
             IOptions<RmqConfig> rmqConfig,
-            IUpdateHandler updateHandler,
-            IMainMenuHelper tBotClientHelper,
-            ITelegramBotClient botClient)
+            IMainMenuHelper tBotClientHelper)
         {
             _factory = new ConnectionFactory()
             {
@@ -43,13 +36,11 @@ namespace AstroTBotService.RMQ
                 VirtualHost = rmqConfig.Value.VirtualHost
             };
 
-            _queueName = rmqConfig.Value.QueueName2;
+            _queueName = rmqConfig.Value.DailyForecastQueue;
             _exchangeName = "exchangeName";
             _routingKey = "routingKey";
 
-            _updateHandler = updateHandler;
             _mainMenuHelper = tBotClientHelper;
-            _botClient = botClient;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -69,30 +60,30 @@ namespace AstroTBotService.RMQ
                 _channel = _connection.CreateModel();
 
                 // Объявляем обменник (если он еще не существует)
-                _channel.ExchangeDeclare(exchange: _exchangeName, type: ExchangeType.Direct, durable: true, autoDelete: false, arguments: null);
+                _channel.ExchangeDeclare(_exchangeName, ExchangeType.Direct, true, false);
 
                 // Объявляем очередь (если она еще не существует)
-                _channel.QueueDeclare(queue: _queueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
+                _channel.QueueDeclare(_queueName, true, false, false);
 
                 // Привязываем очередь к обменнику с ключом маршрутизации
-                _channel.QueueBind(queue: _queueName, exchange: _exchangeName, routingKey: _routingKey);
+                _channel.QueueBind(_queueName, _exchangeName, _routingKey);
 
                 var consumer = new EventingBasicConsumer(_channel);
                 consumer.Received += (model, ea) =>
                 {
                     var body = ea.Body.ToArray();
 
-                    RmqMessage2 message = null;
+                    DailyForecastMessage message = null;
 
                     using (var memoryStream = new MemoryStream(body))
                     {
-                        message = Serializer.Deserialize<RmqMessage2>(memoryStream);
+                        message = Serializer.Deserialize<DailyForecastMessage>(memoryStream);
 
                         Console.WriteLine($" [x] Received (Protobuf): Id={message.Id}");
                     }
 
                     // Имитация обработки сообщения
-                    var sendMessage = ConvertToString(message);
+                    var sendMessage = ConvertMessageToString(message);
                     Console.WriteLine($" [x] Обработано: {message.Id}");
 
                     // Подтверждаем получение и обработку сообщения.
@@ -128,7 +119,7 @@ namespace AstroTBotService.RMQ
             return Task.CompletedTask;
         }
 
-        private string ConvertToString(RmqMessage2 message)
+        private string ConvertMessageToString(DailyForecastMessage message)
         {
             var sb = new StringBuilder();
 

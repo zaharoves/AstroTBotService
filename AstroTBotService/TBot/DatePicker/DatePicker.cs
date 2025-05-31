@@ -32,7 +32,7 @@ namespace AstroTBotService.TBot
                 var year = parts.Length > 2 && int.TryParse(parts[2], out var _year) ? _year : 1;
                 var yearInterval = parts.Length > 1 && int.TryParse(parts[1], out var _yearInterval) ? _yearInterval : 1;
 
-                var dateTime = new DateTime(year, month, day, hour, minute, 0, DateTimeKind.Unspecified);
+                var dateTime = new DateTime(year, month, day, hour, minute, 0, DateTimeKind.Utc);
                 var timeSpan = new TimeSpan(0, gmtOffset, 0, 0);
 
                 datePickerData.MinYearInterval = yearInterval;

@@ -1,41 +1,72 @@
-﻿using AstroTBotService.Entities;
+﻿using AstroHandlerService.Db.Entities;
+using AstroHandlerService.Db.Providers;
 using Telegram.Bot;
 using Telegram.Bot.Types.ReplyMarkups;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace AstroTBotService.TBot
 {
     public class MainMenuHelper : IMainMenuHelper
     {
         private readonly ITelegramBotClient _botClient;
+        private readonly IUserProvider _userProvider;
 
         public MainMenuHelper(
-            ITelegramBotClient botClient)
+            ITelegramBotClient botClient,
+            IUserProvider userProvider)
         {
             _botClient = botClient;
+            _userProvider = userProvider;
         }
 
         public async Task SendMainMenu(ITelegramBotClient botClient, long chatId)
         {
-            var text = string.Empty;
-            InlineKeyboardMarkup keyboard = null;
+            var userInfo = _userProvider.GetUser(chatId).Result;
 
-            //Запрашиваем дату рожднеия
-            if (TBotHandler.ChatsDict.TryGetValue(chatId, out var chatInfo) && chatInfo.DatePickerData?.DateTime != null)
+            if (userInfo == null)
             {
-                text = string.Format(Constants.MAIN_MENU_MESSAGE_BIRTHDAY, chatInfo.DatePickerData.ToString());
-                keyboard = GetMainMenuKeyboard(true, chatInfo.DatePickerData);
+                userInfo = new User()
+                {
+                    Id = chatId,
+                    BirthDate = null,
+                    GmtOffset = null,
+                    Language = "RU"
+                };
+
+                await _userProvider.AddUser(userInfo);
             }
-            else
-            {
-                text = Constants.MAIN_MENU_MESSAGE;
-                keyboard = GetMainMenuKeyboard(false, null);
-            }
+
+            var menuInfo = GetMainMenuKeyboard(userInfo, userInfo.BirthDate.HasValue);
 
             await botClient.SendMessage(
                 chatId: chatId,
-                text: text,
-                replyMarkup: keyboard);
+                text: menuInfo.Message,
+                replyMarkup: menuInfo.Keyboard);
+        }
+
+        public async Task SendMainMenu(ITelegramBotClient botClient, long chatId, int editMessageId)
+        {
+            var userInfo = _userProvider.GetUser(chatId).Result;
+
+            if (userInfo == null)
+            {
+                userInfo = new User()
+                {
+                    Id = chatId,
+                    BirthDate = null,
+                    GmtOffset = null,
+                    Language = "RU"
+                };
+
+                await _userProvider.AddUser(userInfo);
+            }
+
+            var menuInfo = GetMainMenuKeyboard(userInfo, userInfo.BirthDate.HasValue);
+
+            await botClient.EditMessageText(
+                chatId: chatId,
+                messageId: editMessageId,
+                text: menuInfo.Message,
+                replyMarkup: menuInfo.Keyboard);
         }
 
         public static InlineKeyboardButton GetCancelButton(string buttonText = null)
@@ -44,13 +75,15 @@ namespace AstroTBotService.TBot
             return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.Icons.Common.ORANGE_CIRCLE}", $"{Constants.ButtonCommands.TO_MAIN_MENU}");
         }
 
-        private InlineKeyboardMarkup GetMainMenuKeyboard(bool isKnowBirthday, DatePickerData? datePickerData)
+        private (string Message, InlineKeyboardMarkup Keyboard) GetMainMenuKeyboard(User userInfo, bool isKnowBirthday)
         {
-            var mainKeyboard = new InlineKeyboardMarkup();
+            var message = string.Empty;
+            var keyboard = new InlineKeyboardMarkup();
 
             if (isKnowBirthday)
             {
-                mainKeyboard = new InlineKeyboardMarkup(new[]
+                message = string.Format(Constants.MAIN_MENU_MESSAGE_BIRTHDAY, userInfo.DateToString());
+                keyboard = new InlineKeyboardMarkup(new[]
                 {
                     new [] { InlineKeyboardButton.WithCallbackData($"Изменить дату рождения", Constants.ButtonCommands.SET_BIRTHDAY), },
                     new [] { InlineKeyboardButton.WithCallbackData($"Рассчитать прогноз на сегодня", Constants.ButtonCommands.TODAY_FORECAST), },
@@ -59,7 +92,8 @@ namespace AstroTBotService.TBot
             }
             else
             {
-                mainKeyboard = new InlineKeyboardMarkup(new[]
+                message = Constants.MAIN_MENU_MESSAGE;
+                keyboard = new InlineKeyboardMarkup(new[]
                 {
                     new []
                     {
@@ -68,7 +102,7 @@ namespace AstroTBotService.TBot
                 });
             }
 
-            return mainKeyboard;
+            return (message, keyboard);
         }
 
         public async Task SendMessage(long chatId, string message, ReplyMarkup replyMarkup)
@@ -96,8 +130,6 @@ namespace AstroTBotService.TBot
                 Console.WriteLine($"Произошла непредвиденная ошибка при отправке сообщения в чат {chatId}: {ex.Message}");
                 Console.WriteLine($"Стек вызова: {ex.StackTrace}");
             }
-
-            
         }
     }
 }

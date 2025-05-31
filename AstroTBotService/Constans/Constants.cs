@@ -7,13 +7,14 @@ namespace AstroTBotService
     {
         public const string WELCOME_MESSAGE = "Приветственное сообщение!";
 
-        public const string MAIN_MENU_MESSAGE = $"{Icons.Common.SUN} Необходимо заполнить дату Вашего рождения";
-        public const string MAIN_MENU_MESSAGE_BIRTHDAY = $"{Icons.Common.SCIENCE} Дата вашего рождения: \n{{0}}\n\nМожно запустить процесс расчета.";
+        public const string MAIN_MENU_MESSAGE = $"{Icons.Common.SCIENCE} Необходимо заполнить дату Вашего рождения";
+        public const string MAIN_MENU_MESSAGE_BIRTHDAY = $"{Icons.Common.SUN} Дата вашего рождения: \n{{0}}\n\nМожно запустить процесс расчета.";
 
         public const int START_INTERVAL_YEAR = 1900;
         public const int YEARS_INTERVAL = 20;
         public const int YEARS_PER_ROW = 5;
 
+        //TODO Concurrent
         public static readonly ReadOnlyCollection<(int TimeZoneInt, string Description)> TIME_ZONE_DICT =
             new ReadOnlyCollection<(int, string)>(new List<(int, string)>()
         {
@@ -63,6 +64,7 @@ namespace AstroTBotService
             public const string POSITIVE_FORECAST = "positive_forecast:";
         }
 
+        //TODO COncurrent
         public static IReadOnlyDictionary<ZodiacEnum, string> ZodiacIconDict =
             new Dictionary<ZodiacEnum, string>
             {
@@ -83,6 +85,7 @@ namespace AstroTBotService
                 { ZodiacEnum.Pisces, Icons.Zodiac.PISCES }
             };
 
+        //TODO COncurrent
         public static IReadOnlyDictionary<PlanetEnum, string> PlanetIconDict =
             new Dictionary<PlanetEnum, string>
             {
@@ -101,6 +104,7 @@ namespace AstroTBotService
                 { PlanetEnum.Pluto, Icons.Planets.PLUTO }
             };
 
+        //TODO COncurrent
         public static IReadOnlyDictionary<AspectEnum, string> AspectIconDict =
             new Dictionary<AspectEnum, string>
             {
@@ -196,6 +200,7 @@ namespace AstroTBotService
                 public const string QUESTION_WHITE = "❔";
 
                 public const string INFO = "💡";
+                public const string HOURGLASS = "⏳";
 
                 public const string NEXT = "➡️";
                 public const string PREVIOUS = "⬅️";

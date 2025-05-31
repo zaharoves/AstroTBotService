@@ -1,23 +1,9 @@
-﻿using AstroTBotService.RMQ.Entities;
-using ProtoBuf;
+﻿using ProtoBuf;
 
 namespace AstroTBotService.RMQ
 {
     [ProtoContract]
-    public class RmqMessage2
-    {
-        [ProtoMember(1)]
-        public string Id { get; set; }
-
-        [ProtoMember(2)]
-        public List<RmqMessageAspect> Aspects { get; set; }
-
-        [ProtoMember(3)]
-        public DateTime DateTime { get; set; }
-    }
-
-    [ProtoContract]
-    public class RmqMessageAspect
+    public class DailyForecastAspect
     {
         [ProtoMember(1)]
         public string NatalPlanet { get; set; }

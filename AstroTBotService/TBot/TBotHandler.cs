@@ -5,15 +5,13 @@ using Telegram.Bot;
 using System.Globalization;
 using Telegram.Bot.Polling;
 using AstroTBotService.RMQ;
-using AstroTBotService.Entities;
 using AstroTBotService.Enums;
+using AstroHandlerService.Db.Providers;
 
 namespace AstroTBotService.TBot
 {
     public class TBotHandler : IUpdateHandler
     {
-        public static Dictionary<long, (ChatStageEnum Stage, DatePickerData DatePickerData)> ChatsDict = new Dictionary<long, (ChatStageEnum, DatePickerData)>();
-
         //rmqMessageId, chatId 
         public static Dictionary<string, long> RmqDict = new Dictionary<string, long>();
 
@@ -21,17 +19,20 @@ namespace AstroTBotService.TBot
         private readonly IMainMenuHelper _mainMenuHelper;
         private readonly IDatePicker _datePicker;
         private readonly IRmqProducer _rmqProducer;
+        private readonly IUserProvider _userProvider;
 
         public TBotHandler(
             ITelegramBotClient botClient,
             IMainMenuHelper mainMenuHelper,
             IDatePicker tBotDatePicker,
-            IRmqProducer rmqProducer)
+            IRmqProducer rmqProducer,
+            IUserProvider userProvider)
         {
             _botClient = botClient;
             _mainMenuHelper = mainMenuHelper;
             _datePicker = tBotDatePicker;
             _rmqProducer = rmqProducer;
+            _userProvider = userProvider;
         }
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
@@ -49,7 +50,6 @@ namespace AstroTBotService.TBot
         private async Task HandleMessageAsync(Update update)
         {
             var message = update.Message;
-
             var chatId = message.Chat.Id;
 
             if (message.Text.ToLower() == Constants.MessageCommands.START)
@@ -57,9 +57,10 @@ namespace AstroTBotService.TBot
                 //await SendStartMessageAsync(_botClient, message);
                 await _mainMenuHelper.SendMainMenu(
                     _botClient,
-                    message.Chat.Id);
+                    chatId);
 
-                SetChatStage(message.Chat.Id, ChatStageEnum.MainMenu);
+                await _userProvider.SetUserStage(message.Chat.Id, ChatStageEnum.MainMenu.ToString());
+
                 return;
             }
         }
@@ -78,7 +79,6 @@ namespace AstroTBotService.TBot
             var chatId = callbackQuery.Message.Chat.Id;
             var messageData = callbackQuery.Data;
 
-
             switch (messageData)
             {
                 case Constants.ButtonCommands.TO_MAIN_MENU:
@@ -86,28 +86,31 @@ namespace AstroTBotService.TBot
                         botClient,
                         chatId);
 
-                    SetChatStage(chatId, ChatStageEnum.MainMenu);
+                    await _userProvider.SetUserStage(chatId, ChatStageEnum.MainMenu.ToString());
                     return;
                 case Constants.ButtonCommands.TODAY_FORECAST:
-                    await botClient.SendMessage(
-                            chatId: chatId,
-                            text: "Прогноз на сегодня в процессе расчета, пожалуйста подождите...",
-                            replyMarkup: null);
+                    var userInfo = await _userProvider.GetUser(chatId);
 
-                    var messageGuid = Guid.NewGuid().ToString();
-
-                    if (!ChatsDict.TryGetValue(chatId, out var chatInfo))
+                    if (userInfo == null)
                     {
                         return;
                     }
 
-                    var message = new RmqMessage()
+                    await botClient.SendMessage(
+                            chatId: chatId,
+                            text: $"{Constants.Icons.Common.HOURGLASS} Прогноз на сегодня в процессе расчета, пожалуйста подождите...",
+                            replyMarkup: null);;
+
+                    var messageGuid = Guid.NewGuid().ToString();
+
+                    var rmqMessage = new UserInfoMessage()
                     { 
                         MessageId =  messageGuid,
-                        DatePickerData = chatInfo.DatePickerData
+                        DateTime = userInfo.BirthDate,
+                        GmtOffset = userInfo.GmtOffset
                     };
 
-                    _rmqProducer.SendMessage(messageGuid, message);
+                    _rmqProducer.SendMessage(messageGuid, rmqMessage);
                     RmqDict.Add(messageGuid, chatId);
 
                     return;
@@ -118,7 +121,10 @@ namespace AstroTBotService.TBot
 
             _datePicker.TryParseDateTimePicker(callbackQuery, out var datePickerData);
 
-            switch (GetChatStage(chatId))
+            var userStage = _userProvider.GetUserStage(chatId).Result;
+            var userStageEnum = (ChatStageEnum)Enum.Parse(typeof(ChatStageEnum), userStage?.Stage, true);
+
+            switch (userStageEnum)
             {
                 case ChatStageEnum.MainMenu:
                     switch (messageData)
@@ -128,8 +134,8 @@ namespace AstroTBotService.TBot
                                 botClient,
                                 callbackQuery,
                                 $"Выберите год Вашего рождения:");
-
-                            SetChatStage(chatId, ChatStageEnum.YearIntervalPicker);
+                            
+                            await _userProvider.SetUserStage(chatId, ChatStageEnum.YearIntervalPicker.ToString());
                             break;
                         case Constants.ButtonCommands.TODAY_FORECAST:
                             break;
@@ -146,7 +152,7 @@ namespace AstroTBotService.TBot
                         datePickerData,
                         $"Выберите год Вашего рождения:");
 
-                    SetChatStage(chatId, ChatStageEnum.YearPicker);
+                    await _userProvider.SetUserStage(chatId, ChatStageEnum.YearPicker.ToString());
                     break;
 
                 case ChatStageEnum.YearPicker:
@@ -156,7 +162,7 @@ namespace AstroTBotService.TBot
                         datePickerData,
                         "Выберите месяц Вашего рождения:");
 
-                    SetChatStage(chatId, ChatStageEnum.MonthPicker);
+                    await _userProvider.SetUserStage(chatId, ChatStageEnum.MonthPicker.ToString());
                     return;
 
                 case ChatStageEnum.MonthPicker:
@@ -166,7 +172,7 @@ namespace AstroTBotService.TBot
                         datePickerData,
                         $"Выберите день Вашего рождения ({CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datePickerData?.DateTime?.Month ?? 1)} {datePickerData?.DateTime?.Year} г.)");
 
-                    SetChatStage(chatId, ChatStageEnum.DayPicker);
+                    await _userProvider.SetUserStage(chatId, ChatStageEnum.DayPicker.ToString());
                     break;
 
                 case ChatStageEnum.DayPicker:
@@ -176,7 +182,7 @@ namespace AstroTBotService.TBot
                         datePickerData,
                         $"Выберите часы Вашего рождения ({datePickerData?.DateTime?.Day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datePickerData?.DateTime?.Month ?? 1)} {datePickerData?.DateTime?.Year} г.)");
 
-                    SetChatStage(chatId, ChatStageEnum.HourPicker);
+                    await _userProvider.SetUserStage(chatId, ChatStageEnum.HourPicker.ToString());
                     return;
 
                 case ChatStageEnum.HourPicker:
@@ -186,7 +192,7 @@ namespace AstroTBotService.TBot
                         datePickerData,
                         $"Выберите минуты Вашего рождения ({datePickerData?.DateTime?.Day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datePickerData?.DateTime?.Month ?? 1)} {datePickerData?.DateTime?.Year} г. {datePickerData?.DateTime?.Hour}:XX)");
 
-                    SetChatStage(chatId, ChatStageEnum.MinutePicker);
+                    await _userProvider.SetUserStage(chatId, ChatStageEnum.MinutePicker.ToString());
                     break;
 
                 case ChatStageEnum.MinutePicker:
@@ -196,7 +202,7 @@ namespace AstroTBotService.TBot
                         datePickerData,
                         $"Выберите часовой пояс Вашего рождения ({datePickerData?.DateTime?.Day} {CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datePickerData?.DateTime?.Month ?? 1)} {datePickerData?.DateTime?.Year} г. {datePickerData?.DateTime?.Hour}:{datePickerData?.DateTime?.Minute})");
 
-                    SetChatStage(chatId, ChatStageEnum.TimeZonePicker);
+                    await _userProvider.SetUserStage(chatId, ChatStageEnum.TimeZonePicker.ToString());
                     return;
 
                 case ChatStageEnum.TimeZonePicker:
@@ -206,21 +212,28 @@ namespace AstroTBotService.TBot
                         botClient,
                         callbackQuery,
                         datePickerData,
-                        $"{Constants.Icons.Common.SUN} Дата Вашего рождения:\n{datePickerData?.ToString()}");
+                        $"{Constants.Icons.Common.SCIENCE} Дата Вашего рождения:\n{datePickerData?.ToString()}");
 
-                    SetChatStage(chatId, ChatStageEnum.ConfirmBirthday);
+                    await _userProvider.SetUserStage(chatId, ChatStageEnum.ConfirmBirthday.ToString());
                     return;
 
                 case ChatStageEnum.ConfirmBirthday:
                     if (datePickerData?.IsSaveCommand ?? false)
                     {
-                        SetDatePickerData(chatId, datePickerData);
+                        var editUserInfo = new AstroHandlerService.Db.Entities.User()
+                        { 
+                            BirthDate = datePickerData.DateTime,
+                            GmtOffset = datePickerData.GmtOffset
+                        };
+
+                        await _userProvider.EditUser(chatId, editUserInfo);
 
                         await _mainMenuHelper.SendMainMenu(
                             botClient,
-                            chatId);
+                            chatId,
+                            callbackQuery.Message.Id);
 
-                        SetChatStage(chatId, ChatStageEnum.MainMenu);
+                        await _userProvider.SetUserStage(chatId, ChatStageEnum.MainMenu.ToString());
                     }
                     else if (datePickerData?.IsChangeCommand ?? false)
                     {
@@ -230,7 +243,7 @@ namespace AstroTBotService.TBot
                             datePickerData,
                             $"Выберите год Вашего рождения:");
 
-                        SetChatStage(chatId, ChatStageEnum.YearPicker);
+                        await _userProvider.SetUserStage(chatId, ChatStageEnum.YearPicker.ToString());
                     }
                     else if (datePickerData?.IsCancelCommand ?? false)
                     {
@@ -238,119 +251,13 @@ namespace AstroTBotService.TBot
                             botClient,
                             chatId);
 
-                        SetChatStage(chatId, ChatStageEnum.MainMenu);
+                        await _userProvider.SetUserStage(chatId, ChatStageEnum.MainMenu.ToString());
                     }
 
                     return;
             }
 
             #endregion
-
-
-
-            //if (GetChatStage(chatId) == TBotStageEnum.Confirm)
-            //{
-            //    if (messageText == "process:")
-            //    {
-            //        await botClient.SendMessage(
-            //        chatId: chatId,
-            //        text: "В процессе расчета, подождите...",
-            //        replyMarkup: null);
-
-            //        var inlineKeyboard = new InlineKeyboardMarkup(new[]
-            //        {
-            //            new [] { InlineKeyboardButton.WithCallbackData("Рассчитать новую дату", $"start:") }
-            //        });
-
-            //        var messageGuid = Guid.NewGuid().ToString();
-            //        var birthDate = GetChatBirthDate(chatId);
-
-            //        var message = new RmqMessage()
-            //        {
-            //            Id = messageGuid,
-            //            BirthDateTime = birthDate,
-            //            StartDateTime = DateTime.Now.AddDays(-10),
-            //            EndDateTime = DateTime.Now
-            //        };
-
-            //        _rmqProducer.SendMessage(messageGuid, message);
-            //        RmqDict.Add(messageGuid, chatId);
-
-            //        await botClient.SendMessage(
-            //            chatId: chatId,
-            //            text: "Посчитано, смотри",
-            //            replyMarkup: inlineKeyboard);
-
-            //        SetChatStage(chatId, TBotStageEnum.EndProcessing);
-            //    }
-
-        }
-
-        public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
-        {
-            await Console.Out.WriteLineAsync("Возникла ошибка!");
-        }
-
-        private async Task SendStartMessageAsync(ITelegramBotClient botClient, Message message)
-        {
-            var user = message?.From;
-
-            string welcomeText = $"Приветствую вас, {user.FirstName ?? string.Empty} {user.LastName ?? string.Empty}!\n\n{Constants.WELCOME_MESSAGE}";
-
-            var inlineKeyboard = InlineKeyboardButton.WithCallbackData("Ввести дату рождения", Constants.ButtonCommands.SET_BIRTHDAY);
-
-            await botClient.SendMessage(
-                chatId: message?.Chat?.Id,
-                text: welcomeText,
-                replyMarkup: inlineKeyboard);
-        }
-
-        private void SetChatStage(long chatId, ChatStageEnum stageEnum)
-        {
-            if (ChatsDict.TryGetValue(chatId, out var outDatePickerData))
-            {
-                ChatsDict[chatId] = (stageEnum, ChatsDict[chatId].DatePickerData);
-            }
-            else
-            {
-                ChatsDict.Add(chatId, (stageEnum, new DatePickerData()));
-            }
-        }
-
-        private ChatStageEnum GetChatStage(long chatId)
-        {
-            if (ChatsDict.TryGetValue(chatId, out var outDatePickerData))
-            {
-                return outDatePickerData.Stage;
-            }
-            else
-            {
-                return ChatStageEnum.MainMenu;
-            }
-        }
-
-        private void SetDatePickerData(long chatId, DatePickerData datePickerData)
-        {
-            if (ChatsDict.TryGetValue(chatId, out var outDatePickerData))
-            {
-                ChatsDict[chatId] = (ChatsDict[chatId].Stage, datePickerData);
-            }
-            else
-            {
-                ChatsDict.Add(chatId, (ChatStageEnum.MainMenu, datePickerData));
-            }
-        }
-
-        private DatePickerData GetDatePickerData(long chatId)
-        {
-            if (ChatsDict.TryGetValue(chatId, out var outDatePickerData))
-            {
-                return outDatePickerData.DatePickerData;
-            }
-            else
-            {
-                return new DatePickerData();
-            }
         }
 
         public Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
