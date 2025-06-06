@@ -14,17 +14,5 @@ namespace AstroTBotService.Entities
         public bool IsCancelCommand { get; set; }
 
         public bool IsChangeCommand { get; set; }
-
-        public override string ToString()
-        {
-            if (!DateTime.HasValue)
-            {
-                return string.Empty;
-            }
-
-            var gmtSign = GmtOffset >= TimeSpan.Zero ? "+" : "-";
-
-            return $"{DateTime.Value.ToString("d MMMM yyyyг. HH:mm")} [GMT{gmtSign}{Math.Abs(GmtOffset.Hours)}]";
-        }
     }
 }

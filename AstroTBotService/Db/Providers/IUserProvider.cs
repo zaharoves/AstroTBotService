@@ -5,13 +5,13 @@ namespace AstroHandlerService.Db.Providers
 {
     public interface IUserProvider
     {
-        Task<User?> GetUser(long userId);
+        Task<AstroUser?> GetUser(long userId);
 
-        Task AddUser(User user);
+        Task AddUser(AstroUser user);
 
-        Task RemoveUser(User user);
+        Task RemoveUser(AstroUser user);
 
-        Task EditUser(long userId, User editInfo);
+        Task EditUser(long userId, AstroUser editInfo);
 
         Task SetUserStage(long userId, string stageString);
 

@@ -13,6 +13,8 @@
         TimeZonePicker,
         ConfirmBirthday,
 
+        LanguagePicker,
+
         ProcessingResult
     }
 }

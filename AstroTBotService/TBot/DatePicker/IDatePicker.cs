@@ -6,22 +6,22 @@ namespace AstroTBotService.TBot
 {
     public interface IDatePicker
     {
-        bool TryParseDateTimePicker(CallbackQuery callbackQuery, out DatePickerData datePickerData);
+        bool TryParseDateTimePicker(TBotClientData clientData, out DatePickerData datePickerData);
 
-        Task SendYearIntervalPicker(ITelegramBotClient botClient, CallbackQuery callbackQuery, string text);
+        Task SendYearIntervalPicker(TBotClientData clientData, string text);
 
-        Task SendYearPicker(ITelegramBotClient botClient, CallbackQuery callbackQuery, DatePickerData datePickerData, string text);
+        Task SendYearPicker(TBotClientData clientData, string text);
 
-        Task SendMonthPicker(ITelegramBotClient botClient, CallbackQuery callbackQuery, DatePickerData datePickerData, string text);
+        Task SendMonthPicker(TBotClientData clientData, string text);
 
-        Task SendDayPicker(ITelegramBotClient botClient, CallbackQuery callbackQuery, DatePickerData datePickerData, string text);
+        Task SendDayPicker(TBotClientData clientData, string text);
 
-        Task SendHourPicker(ITelegramBotClient botClient, CallbackQuery callbackQuery, DatePickerData datePickerData, string text);
+        Task SendHourPicker(TBotClientData clientData, string text);
 
-        Task SendMinutePicker(ITelegramBotClient botClient, CallbackQuery callbackQuery, DatePickerData datePickerData, string text);
+        Task SendMinutePicker(TBotClientData clientData, string text);
 
-        Task SendTimeZonePicker(ITelegramBotClient botClient, CallbackQuery callbackQuery, DatePickerData datePickerData, string text);
+        Task SendTimeZonePicker(TBotClientData clientData, string text);
 
-        Task SendConfirmDate(ITelegramBotClient botClient, CallbackQuery callbackQuery, DatePickerData datePickerData, string text);
+        Task SendConfirmDate(TBotClientData clientData, string text);
     }
 }

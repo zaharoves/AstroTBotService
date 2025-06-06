@@ -83,7 +83,7 @@ namespace AstroTBotService.RMQ
                     }
 
                     // Имитация обработки сообщения
-                    var sendMessage = ConvertMessageToString(message);
+                    var sendMessages = ConvertToTMessages(message);
                     Console.WriteLine($" [x] Обработано: {message.Id}");
 
                     // Подтверждаем получение и обработку сообщения.
@@ -92,15 +92,11 @@ namespace AstroTBotService.RMQ
                     _channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
                     Console.WriteLine($" [x] Подтверждено: '{message.Id}'");
 
-                    TBotHandler.RmqDict.TryGetValue(message.Id, out long chatId);
-
-                    var keyboard = new InlineKeyboardMarkup(new[]
-                    {
-                        new [] { MainMenuHelper.GetCancelButton("На главную") }
-                    });
+                    //TODO
+                    TBotUpdateHandler.RmqDict.TryGetValue(message.Id, out long chatId);
 
                     //TODO рассчитать текст сообщения
-                    _mainMenuHelper.SendMessage(chatId, sendMessage, keyboard);
+                    _mainMenuHelper.SendMessageHtml(chatId, sendMessages, null); //keyboard
                 };
 
                 // Начинаем потребление сообщений
@@ -119,15 +115,16 @@ namespace AstroTBotService.RMQ
             return Task.CompletedTask;
         }
 
-        private string ConvertMessageToString(DailyForecastMessage message)
+        private List<string> ConvertToTMessages(DailyForecastMessage message)
         {
-            var sb = new StringBuilder();
+            var returnList = new List<string>();
 
-            sb.Append($"Прогноз на {message.DateTime.ToString("dd MMMM yyyyг.")}\n");
-            sb.Append($"{new string('-', 50)}\n");
+            returnList.Add($"Прогноз на {message.DateTime.ToString("dd MMMM yyyyг.")}\n{new string('-', 50)}\n");
 
             foreach (var aspect in message.Aspects)
             {
+                var sb = new StringBuilder();
+
                 int transitAngles = (int)Math.Truncate(aspect.TransitZodiacAngles);
                 string transitAnglesStr = (transitAngles.ToString().Length < 2) ? $"0{transitAngles}" : transitAngles.ToString();
 
@@ -165,12 +162,24 @@ namespace AstroTBotService.RMQ
                 var natalStr = $"{natalPlanetIcon}{natalRetroIcon}  {natalZodiacIcon}[{natalAnglesStr}{CommonIcons.ANGLES}{natalMinutesStr}{CommonIcons.MINUTES}]";
 
                 sb.Append($"{aspect.TransitPlanet}{transitRetroStr} {aspect.Aspect} {aspect.NatalPlanet}{natalRetroStr}");
+
+                if (transitPlanetEnum == PlanetEnum.Moon)
+                {
+                    sb.Append($" [{aspect.StartDate.ToString("HH:mm")} - {aspect.EndDate.ToString("HH:mm")}]");
+                }
+
                 sb.Append($"\n{transitStr}   {aspectIcon}   {natalStr}");
-                sb.Append($"\nSome Description");
-                sb.Append($"\n\n");
+
+                sb.Append("\n");
+                var a = @"
+<blockquote expandable>Aspect descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd descriptionadsasdddddddddddddddddddddddddddddddd </blockquote>
+";
+                sb.Append(a);
+
+                returnList.Add(sb.ToString());
             }
 
-            return sb.ToString();
+            return returnList;
         }
     }
 }

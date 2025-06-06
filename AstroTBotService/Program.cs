@@ -5,7 +5,9 @@ using AstroTBotService.RMQ;
 using AstroTBotService.TBot;
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
+using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
+using Telegram.Bot.Types.Enums;
 
 namespace AstroTBotService
 {
@@ -13,7 +15,7 @@ namespace AstroTBotService
     {
         private static ITelegramBotClient telegramBotClient = new TelegramBotClient("7633316207:AAER-wgES9FTiehku-TeQy7C2wXSMj1AqZo");
 
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = Host.CreateDefaultBuilder(args);
 
@@ -21,68 +23,66 @@ namespace AstroTBotService
             {
                 services.Configure<RmqConfig>(hostContext.Configuration.GetSection("RabbitMq"));
                 services.Configure<PostgresConfig>(hostContext.Configuration.GetSection("PostgresConfig"));
-                
+
+                services.AddSingleton(provider => telegramBotClient);
+                services.AddSingleton<IResourcesLocaleManager, ResourcesLocaleManager>();
+
                 services.AddScoped(serviceProvider =>
                 {
                     var config = serviceProvider.GetRequiredService<IOptions<PostgresConfig>>();
                     return new ApplicationContext(config);
                 });
 
-                services.AddTransient(provider => telegramBotClient);
                 services.AddScoped<IMainMenuHelper, MainMenuHelper>();
                 services.AddScoped<IUserProvider, UserProvider>();
                 services.AddScoped<IRmqProducer, RmqProducer>();
-                services.AddScoped<IUpdateHandler, TBotHandler>();
+                services.AddScoped<IUpdateHandler, TBotUpdateHandler>();
                 services.AddScoped<IDatePicker, DatePicker>();
-                services.AddHostedService<RmqConsumerService>();
-                services.AddHostedService<TBotService>();
+
+                //services.AddHostedService<RmqConsumerService>();
+                //services.AddHostedService<TBotService>();
             }).Build();
 
-            host.Run();
+            ///
+            // Получаем Singleton-экземпляр ITelegramBotClient из корневого провайдера
+            var botClient = host.Services.GetRequiredService<ITelegramBotClient>();
 
+            // Запуск Long Polling
+            using var cts = new CancellationTokenSource();
 
+            var receiverOptions = new ReceiverOptions
+            {
+                AllowedUpdates = Array.Empty<UpdateType>() // Получаем все типы обновлений
+            };
 
+            botClient.StartReceiving(
+                async (client, update, token) =>
+                {
+                    using (var scope = host.Services.CreateScope())
+                    {
+                        var updateHandler = scope.ServiceProvider.GetRequiredService<IUpdateHandler>();
+                        await updateHandler.HandleUpdateAsync(botClient, update, token);
+                    }
+                },
+                async (client, exception, token) =>
+                {
+                    Console.WriteLine($"Polling error: {exception.Message}"); 
 
+                    if (exception is ApiRequestException apiRequestException)
+                    {
+                        Console.WriteLine($"Telegram API Error: {apiRequestException.ErrorCode} - {apiRequestException.Message}");
+                    }
 
-            ////////////////
+                    await Task.CompletedTask; 
+                },
+                receiverOptions,
+                cts.Token
+            );
 
-            //var botName = bot.GetMe().Result.FirstName;
+            var me = await botClient.GetMe();
+            Console.WriteLine($"Start listening for @{me.Username}");
 
-            //var cts = new CancellationTokenSource();
-            //var cancellationToken = cts.Token;
-
-            //var receiverOptions = new ReceiverOptions
-            //{
-            //    AllowedUpdates = { }, // receive all update types
-            //};
-
-            //bot.StartReceiving(
-            //    TBotHandler.HandleUpdateAsync,
-            //    TBotHandler.HandleErrorAsync,
-            //    receiverOptions,
-            //    cancellationToken
-            //);
-
-            //Console.WriteLine($"Запущен бот {botName}");
-
-
-            /////////////////
-
-            //var rmqSettings = RmqSettings.CreateDefault();
-            //var rmqProducer = new RmqProducer(rmqSettings);
-
-            //var mes1 = new RmqMessage() { Id = Guid.NewGuid().ToString(), BirthDateTime = new DateTime(2025, 12, 1), StartDateTime = new DateTime(2001, 11, 15), EndDateTime = new DateTime(2001, 11, 21) };
-            //rmqProducer.SendMessage(mes1.Id, mes1);
-
-            //var mes2 = new RmqMessage() { Id = Guid.NewGuid().ToString(), BirthDateTime = new DateTime(2025, 12, 2), StartDateTime = new DateTime(2001, 11, 15), EndDateTime = new DateTime(2001, 11, 22) };
-            //rmqProducer.SendMessage(mes2.Id, mes2);
-
-            //var mes3 = new RmqMessage() { Id = Guid.NewGuid().ToString(), BirthDateTime = new DateTime(2025, 12, 3), StartDateTime = new DateTime(2001, 11, 15), EndDateTime = new DateTime(2001, 11, 23) };
-            //rmqProducer.SendMessage(mes3.Id, mes3);
-
-
-            ////////////////
-
+            await host.RunAsync();
         }
     }
 }

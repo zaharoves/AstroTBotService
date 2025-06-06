@@ -1,49 +1,56 @@
 ﻿using AstroTBotService.Enums;
-using System.Collections.ObjectModel;
+using System.Globalization;
 
 namespace AstroTBotService
 {
     public static class Constants
     {
-        public const string WELCOME_MESSAGE = "Приветственное сообщение!";
-
-        public const string MAIN_MENU_MESSAGE = $"{Icons.Common.SCIENCE} Необходимо заполнить дату Вашего рождения";
-        public const string MAIN_MENU_MESSAGE_BIRTHDAY = $"{Icons.Common.SUN} Дата вашего рождения: \n{{0}}\n\nМожно запустить процесс расчета.";
-
         public const int START_INTERVAL_YEAR = 1900;
         public const int YEARS_INTERVAL = 20;
         public const int YEARS_PER_ROW = 5;
 
+        /// <summary>
+        /// Max telegram message length
+        /// </summary>
+        public const int MAX_T_MESSAGE_LENGTH = 4096;
+
         //TODO Concurrent
-        public static readonly ReadOnlyCollection<(int TimeZoneInt, string Description)> TIME_ZONE_DICT =
-            new ReadOnlyCollection<(int, string)>(new List<(int, string)>()
-        {
-            { (-12, "Россия. Петропавловск-Камчатский")},
-            { (-11, "")},
-            { (-10, "Америка. шт.Гавайи")},
-            { (-9, "")},
-            { (-8, "Америка. шт.Аляска")},
-            { (-7, "Америка. шт.Орегон")},
-            { (-6, "Мексика. Мехико")},
-            { (-5, "Америка. шт.Оклахома")},
-            { (-4, "Америка. Вашингтон")},
-            { (-3, "Аргентина. Буэнос-Айрэс")},
-            { (-2, "")},
-            { (-1, "Кабо-Верде")},
-            { (0, "Исландия. Рейкьявик")},
-            { (1, "Великобритания. Лондон")},
-            { (2, "Германия. Берлин")},
-            { (3, "Россия. Москва")},
-            { (4, "Грузия. Тбилиси")},
-            { (5, "Казахстан. Астана")},
-            { (6, "Киргизия. Бишкек")},
-            { (7, "Вьетнам. Ханой")},
-            { (8, "Китай. Пекин")},
-            { (9, "Япония. Токио")},
-            { (10, "Россия. Хабаровск")},
-            { (11, "Россия. Южно-Сахалинск")},
-            { (12, "Россия. Петропавловск-Камчатский")}
-        });
+        public static readonly IReadOnlyList <TimeSpan> TIME_ZONE_DICT =
+            new List<TimeSpan>()
+            { 
+                {new TimeSpan(-11, 0, 0) },
+                {new TimeSpan(-10, 0, 0) },
+                {new TimeSpan(-9, -30, 0) },
+                {new TimeSpan(-9, 0, 0) },
+                {new TimeSpan(-8, 0, 0) },
+                {new TimeSpan(-7, 0, 0) },
+                {new TimeSpan(-6, 0, 0) },
+                {new TimeSpan(-5, 0, 0) },
+                {new TimeSpan(-4, -30, 0) },
+                {new TimeSpan(-4, 0, 0) },
+                {new TimeSpan(-3, -30, 0) },
+                {new TimeSpan(-3, 0, 0) },
+                {new TimeSpan(-2, 0, 0) },
+                {new TimeSpan(-1, 0, 0) },
+                {new TimeSpan(0, 0, 0) },
+                {new TimeSpan(1, 0, 0) },
+                {new TimeSpan(2, 0, 0) },
+                {new TimeSpan(3, 0, 0) },
+                {new TimeSpan(3, 30, 0) },
+                {new TimeSpan(4, 0, 0) },
+                {new TimeSpan(4, 30, 0) },
+                {new TimeSpan(5, 0, 0) },
+                {new TimeSpan(5, 30, 0) },
+                {new TimeSpan(6, 0, 0) },
+                {new TimeSpan(6, 30, 0) },
+                {new TimeSpan(7, 0, 0) },
+                {new TimeSpan(8, 0, 0) },
+                {new TimeSpan(9, 0, 0) },
+                {new TimeSpan(9, 30, 0) },
+                {new TimeSpan(10, 0, 0) },
+                {new TimeSpan(11, 0, 0) },
+                {new TimeSpan(12, 0, 0) }
+        };
 
         public static class MessageCommands
         {
@@ -54,14 +61,16 @@ namespace AstroTBotService
         {
             public const string IGNORE = "ignore";
 
-            public const string DATE_PICKER = "date_time_picker";
-            public const string SAVE_BIRTHDAY = "save_birthday";
-            public const string CHANGE_BIRTHDAY = "change_birthday";
+            public const string DATE_PICKER = "dateTimePicker";
+            public const string SAVE_BIRTHDAY = "saveBirthday";
+            public const string CHANGE_BIRTHDAY = "changeBirthday";
             public const string TO_MAIN_MENU = "to_main_menu";
 
-            public const string SET_BIRTHDAY = "set_birthday";
-            public const string TODAY_FORECAST = "today_forecast";
-            public const string POSITIVE_FORECAST = "positive_forecast:";
+            public const string SET_BIRTHDATE = "setBirthdate";
+            public const string TODAY_FORECAST = "todayForecast";
+            public const string POSITIVE_FORECAST = "positiveForecast:";
+
+            public const string CHANGE_LANGUAGE = "changeLanguage";
         }
 
         //TODO COncurrent
@@ -114,6 +123,22 @@ namespace AstroTBotService
                 { AspectEnum.Square, Icons.Aspects.SQUARE },
                 { AspectEnum.Trine, Icons.Aspects.TRINE },
                 { AspectEnum.Opposition, Icons.Aspects.OPPOSITION }
+            };
+
+        //TODO COncurrent
+        public static IReadOnlyDictionary<string, CultureInfo> LocaleDict =
+            new Dictionary<string, CultureInfo>
+            {
+                { "ru", new CultureInfo("ru-RU") },
+                { "en", new CultureInfo("en-US") }
+            };
+
+        //TODO COncurrent
+        public static IReadOnlyDictionary<string, (string Icon, string Description)> FlagsInfoDict =
+            new Dictionary<string, (string Icon, string Description)>
+            {
+                { "ru-RU", (Icons.Flags.RUSSIAN, "Русский") },
+                { "en-US", (Icons.Flags.ENGLISH, "English" ) }
             };
 
         public static class Icons
@@ -208,6 +233,9 @@ namespace AstroTBotService
                 public const string SCIENCE = "⚛️";
                 public const string SUN = "🔅";
 
+                public const string PLUS = "➕";
+                public const string MINUS = "➖";
+
                 public const string RED_CIRCLE = "🔴";
                 public const string ORANGE_CIRCLE = "🟠";
                 public const string YELLOW_CIRCLE = "🟡";
@@ -227,6 +255,24 @@ namespace AstroTBotService
                 public const string BROWN_SQUARE = "🟫";
                 public const string BLACK_SQUARE = "⬛";
                 public const string WHITE_SQUARE = "⬜";
+
+                public const string CLOCK_1 = "🕐";
+                public const string CLOCK_2 = "🕑";
+                public const string CLOCK_3 = "🕒";
+                public const string CLOCK_4 = "🕓";
+                public const string CLOCK_5 = "🕔";
+
+                public const string CLOCK_6 = "🕜";
+                public const string CLOCK_7 = "🕝";
+                public const string CLOCK_8 = "🕞";
+                public const string CLOCK_9 = "🕟";
+                public const string CLOCK_10 = "🕠";
+            }
+
+            public static class Flags
+            {
+                public const string RUSSIAN = "🇷🇺";
+                public const string ENGLISH = "🇬🇧";
             }
         }
     }

@@ -14,42 +14,42 @@ namespace AstroHandlerService.Db.Providers
             _appContext = appContext;
         }
 
-        public async Task<User?> GetUser(long userId)
+        public async Task<AstroUser?> GetUser(long userId)
         {
-            return await _appContext.Users
+            return await _appContext.AstroUsers
                 .FirstOrDefaultAsync(x => x.Id == userId);
         }
 
-        public async Task AddUser(User user)
+        public async Task AddUser(AstroUser user)
         {
             if (user == null)
             {
                 return;
             }
 
-            _appContext.Users.Add(user);
+            _appContext.AstroUsers.Add(user);
             await _appContext.SaveChangesAsync();
         }
 
-        public async Task RemoveUser(User user)
+        public async Task RemoveUser(AstroUser user)
         {
             if (user == null)
             {
                 return;
             }
 
-            _appContext.Users.Remove(user);
+            _appContext.AstroUsers.Remove(user);
             await _appContext.SaveChangesAsync();
         }
 
-        public async Task EditUser(long userId, User editInfo)
+        public async Task EditUser(long userId, AstroUser editInfo)
         {
             if (editInfo == null)
             {
                 return;
             }
 
-            var user = await _appContext.Users
+            var user = await _appContext.AstroUsers
                 .FirstOrDefaultAsync(x => x.Id == userId);
 
             if (user == null)
@@ -61,8 +61,16 @@ namespace AstroHandlerService.Db.Providers
             user.GmtOffset = editInfo.GmtOffset;
             user.Language = editInfo.Language;
 
-            _appContext.Users.Update(user);
-            await _appContext.SaveChangesAsync();
+            
+            _appContext.AstroUsers.Update(user);
+            try
+            {
+                await _appContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {//TODO
+                var a = 0;
+            }
         }
 
         public async Task SetUserStage(long userId, string stageString)

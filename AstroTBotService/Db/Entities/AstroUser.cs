@@ -1,22 +1,47 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using Telegram.Bot.Types;
+using System.Globalization;
+using System.Reflection.Metadata;
+using AstroTBotService;
 
 namespace AstroHandlerService.Db.Entities
 {
-    public class User
+    public class AstroUser
     {
-        public User()
+        public AstroUser()
         {
         }
 
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
         public long? Id { get; set; }
-        public DateTime? BirthDate { get; set; }
+
+        private DateTime? _birthDate;
+        public DateTime? BirthDate
+        {
+            get
+            {
+                return _birthDate;
+            }
+
+            set
+            {
+                if (value.HasValue)
+                {
+                    _birthDate = value.Value.ToUniversalTime();
+                }
+                else
+                {
+                    _birthDate = value;
+                }
+            }
+        }
+
         public TimeSpan? GmtOffset { get; set; }
         public string? Language { get; set; }
 
-        public string DateToString()
+        public string DateToString(CultureInfo cultureInfo)
         {
             if (!BirthDate.HasValue)
             {
@@ -44,7 +69,9 @@ namespace AstroHandlerService.Db.Entities
                 }
             }
 
-            return $"{BirthDate.Value.ToString("d MMMM yyyyг. HH:mm")} [GMT{gmtString}]";
+            return $"{BirthDate.Value.ToString("d MMMM yyyy " +
+                $"{Constants.Icons.Common.MINUS}  " +
+                "HH:mm", cultureInfo)} [GMT{gmtString}]";
         }
     }
 }

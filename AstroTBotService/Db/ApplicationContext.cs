@@ -11,7 +11,7 @@ namespace AstroHandlerService.Db
         private PostgresConfig _postgresConfig;
 
         public DbSet<Ephemeris> Ephemerises { get; }
-        public DbSet<User> Users { get; }
+        public DbSet<AstroUser> AstroUsers { get; }
         public DbSet<UserStage> UsersStages { get; }
 
         public ApplicationContext(IOptions<PostgresConfig> postgresConfig)
@@ -19,7 +19,7 @@ namespace AstroHandlerService.Db
             _postgresConfig = postgresConfig.Value;
 
             Ephemerises = Set<Ephemeris>();
-            Users = Set<User>();
+            AstroUsers = Set<AstroUser>();
             UsersStages = Set<UserStage>();
         }
 

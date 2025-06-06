@@ -33,5 +33,11 @@ namespace AstroTBotService.RMQ
 
         [ProtoMember(9)]
         public string Aspect { get; set; }
+        
+        [ProtoMember(10)]
+        public DateTime StartDate { get; set; }
+
+        [ProtoMember(11)]
+        public DateTime EndDate { get; set; }
     }
 }
