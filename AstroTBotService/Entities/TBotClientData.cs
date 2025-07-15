@@ -1,5 +1,4 @@
-﻿using AstroHandlerService.Db.Entities;
-using AstroTBotService.TBot;
+﻿using AstroTBotService.Db.Entities;
 using System.Globalization;
 using Telegram.Bot.Types;
 
@@ -20,5 +19,9 @@ namespace AstroTBotService.Entities
         public string? CallbackData { get; set; }
 
         public DatePickerData DatePickerData { get; set; } 
+
+
+        public double? Longitude { get; set; }
+        public double? Latitude { get; set; }
     }
 }

@@ -1,5 +1,5 @@
 ﻿
-namespace AstroHandlerService.Db.Entities
+namespace AstroTBotService.Db.Entities
 {
     public class Ephemeris
     {

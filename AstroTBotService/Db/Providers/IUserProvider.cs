@@ -1,7 +1,7 @@
-﻿using AstroHandlerService.Db.Entities;
-using AstroTBotService.Db.Entities;
+﻿using AstroTBotService.Db.Entities;
+using AstroTBotService.Enums;
 
-namespace AstroHandlerService.Db.Providers
+namespace AstroTBotService.Db.Providers
 {
     public interface IUserProvider
     {
@@ -11,9 +11,11 @@ namespace AstroHandlerService.Db.Providers
 
         Task RemoveUser(AstroUser user);
 
-        Task EditUser(long userId, AstroUser editInfo);
+        Task EditBirthday(long userId, DateTime? birthDateTime, TimeSpan? gmtOffset);
+        Task EditLanguage(long userId, string? language);
+        Task EditLocation(long userId, double? longitude, double? latitude);
 
-        Task SetUserStage(long userId, string stageString);
+        Task SetUserStage(long userId, ChatStageEnum? stageString);
 
         Task<UserStage?> GetUserStage(long userId);
     }

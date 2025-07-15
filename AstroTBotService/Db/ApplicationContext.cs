@@ -1,10 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using AstroHandlerService.Configurations;
-using AstroHandlerService.Db.Entities;
 using AstroTBotService.Db.Entities;
+using AstroTBotService.Configurations;
 
-namespace AstroHandlerService.Db
+namespace AstroTBotService.Db
 {
     public class ApplicationContext : DbContext
     {

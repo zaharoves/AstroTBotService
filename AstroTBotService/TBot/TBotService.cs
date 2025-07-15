@@ -7,17 +7,30 @@ namespace AstroTBotService.TBot
     {
         private readonly ITelegramBotClient _botClient;
         private readonly IUpdateHandler _updateHandler;
+        private readonly ILogger<TBotService> _logger;
 
-        public TBotService(ITelegramBotClient botClient, IUpdateHandler updateHandler)
+
+        public TBotService(
+            ITelegramBotClient botClient, 
+            IUpdateHandler updateHandler,
+            ILogger<TBotService> logger)
         {
             _botClient = botClient;
             _updateHandler = updateHandler;
+            _logger = logger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             try
             {
+                _logger.LogTrace("1");
+                _logger.LogDebug("2");
+                _logger.LogInformation("3");
+                _logger.LogWarning("4");
+                _logger.LogError("5");
+                _logger.LogCritical("6");
+
                 var botName = _botClient.GetMe().Result.FirstName;
 
                 var cts = new CancellationTokenSource();

@@ -13,6 +13,11 @@
         TimeZonePicker,
         ConfirmBirthday,
 
+        //BirthLongitudePicker,
+        //BirthLatitudePicker,
+        BirthLocationPicker,
+        ConfirmBirthLocation,
+
         LanguagePicker,
 
         ProcessingResult
