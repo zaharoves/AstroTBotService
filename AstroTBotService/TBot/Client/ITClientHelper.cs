@@ -6,7 +6,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace AstroTBotService.TBot
 {
-    public interface IMainMenuHelper
+    public interface ITClientHelper
     {
         Task SendMainMenu(TBotClientData clientData);
 
@@ -16,8 +16,7 @@ namespace AstroTBotService.TBot
 
         Task SendLanguagePicker(TBotClientData clientData);
 
-        Task EditToLanguagePicker(TBotClientData clientData);
-
+        Task SendHouseSystemPicker(TBotClientData clientData);
 
 
         Task SendMessage(long chatId, string message, ReplyMarkup replyMarkup);
@@ -28,10 +27,10 @@ namespace AstroTBotService.TBot
 
         InlineKeyboardButton GetCancelButton(TBotClientData clientData, string buttonText);
 
-        List<string> GetChartMessage(List<AspectInfo> aspects, TBotClientData clientData, ChartTypeEnum chartTypeEnum);
+        List<string> GetChartMessages(List<AspectInfo> aspects, TBotClientData clientData, ChartTypeEnum chartTypeEnum);
 
-        string GetPlanetsInfoMessage(ChartInfo chartInfo, TBotClientData clientData);
+        string GetNatalPlanetsMessage(ChartInfo chartInfo, TBotClientData clientData);
 
-        string GetHousesInfoMessage(ChartInfo chartInfo, TBotClientData clientData);
+        string GetHousesMessage(ChartInfo chartInfo, TBotClientData clientData);
     }
 }

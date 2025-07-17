@@ -7,18 +7,18 @@ namespace AstroTBotService.TBot
     public class LocationPicker : ILocationPicker
     {
         private readonly ITelegramBotClient _botClient;
-        private readonly IMainMenuHelper _mainMenuHelper;
+        private readonly ITClientHelper _clientHelper;
         private readonly IResourcesLocaleManager _resourcesLocaleManager;
         private readonly IResourcesLocaleManager _localeManager;
 
         public LocationPicker(
             ITelegramBotClient botClient,
-            IMainMenuHelper mainMenuHelper,
+            ITClientHelper clientHelper,
             IResourcesLocaleManager resourcesLocaleManager,
             IResourcesLocaleManager localeManager)
         {
             _botClient = botClient;
-            _mainMenuHelper = mainMenuHelper;
+            _clientHelper = clientHelper;
             _resourcesLocaleManager = resourcesLocaleManager;
             _localeManager = localeManager;
         }
@@ -92,7 +92,7 @@ namespace AstroTBotService.TBot
             {
                 new []
                 {
-                    _mainMenuHelper.GetCancelButtonWithEdit(clientData)
+                    _clientHelper.GetCancelButtonWithEdit(clientData)
                 }
             });
 
@@ -119,7 +119,7 @@ namespace AstroTBotService.TBot
                 },
                 new []
                 {
-                    _mainMenuHelper.GetCancelButtonWithEdit(clientData)
+                    _clientHelper.GetCancelButtonWithEdit(clientData)
                 }
             });
 

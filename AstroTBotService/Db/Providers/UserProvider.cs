@@ -128,6 +128,30 @@ namespace AstroTBotService.Db.Providers
             }
         }
 
+        public async Task EditHouseSystem(long userId, HouseSystemEnum houseSystem)
+        {
+            var user = await _appContext.AstroUsers
+                .FirstOrDefaultAsync(x => x.Id == userId);
+
+            if (user == null)
+            {
+                return;
+            }
+
+            user.HouseSystem = houseSystem;
+
+            _appContext.AstroUsers.Update(user);
+            try
+            {
+                await _appContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                //TODO
+                var a = 0;
+            }
+        }
+
         public async Task SetUserStage(long userId, ChatStageEnum? stageEnum)
         {
             var stage = _appContext.UsersStages

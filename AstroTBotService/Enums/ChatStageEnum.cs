@@ -19,6 +19,7 @@
         ConfirmBirthLocation,
 
         LanguagePicker,
+        HouseSystemPicker,
 
         ProcessingResult
     }

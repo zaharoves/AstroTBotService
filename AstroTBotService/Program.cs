@@ -10,6 +10,7 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
 using Serilog;
 using Serilog.Debugging;
+using AstroTBotService.Common;
 
 
 namespace AstroTBotService
@@ -32,6 +33,7 @@ namespace AstroTBotService
 
                 services.AddSingleton(provider => telegramBotClient);
                 services.AddSingleton<IResourcesLocaleManager, ResourcesLocaleManager>();
+                services.AddSingleton<ICommonHelper, CommonHelper>();
 
                 services.AddScoped(serviceProvider =>
                 {
@@ -44,11 +46,10 @@ namespace AstroTBotService
                 services.AddScoped<IEphemerisProvider, EphemerisProvider>();
                 services.AddScoped<ISwissEphemerisService, SwissEphemerisService>();
 
-                services.AddScoped<IMainMenuHelper, MainMenuHelper>();
+                services.AddScoped<ITClientHelper, TClientHelper>();
                 services.AddScoped<IUpdateHandler, TBotUpdateHandler>();
                 services.AddScoped<IDatePicker, DatePicker>();
                 services.AddScoped<ILocationPicker, LocationPicker>();
-
             });
 
             // 2. Настраиваем Serilog, используя IOptions

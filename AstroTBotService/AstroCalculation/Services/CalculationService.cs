@@ -1,50 +1,39 @@
 ﻿using AstroTBotService.AstroCalculation.Entities;
+using AstroTBotService.Common;
 using AstroTBotService.Enums;
-using Telegram.Bot.Types;
-
 
 namespace AstroTBotService.AstroCalculation.Services
 {
     public class CalculationService : ICalculationService
     {
+        private readonly ICommonHelper _commonHelper;
         private readonly ISwissEphemerisService _swissEphemerisService;
 
         public CalculationService(
+            ICommonHelper commonHelper,
             ISwissEphemerisService swissEphemerisService)
         {
+            _commonHelper = commonHelper;
             _swissEphemerisService = swissEphemerisService;
         }
 
-        public async Task<ChartInfo> GetChartInfo(DateTime dateTime, TimeSpan gmtOffset, double longitude, double latitude)
+        public async Task<ChartInfo> GetChartInfo(DateTime dateTime, TimeSpan gmtOffset, double longitude, double latitude, HouseSystemEnum houseSystem)
         {
             var birthDateTime = (dateTime - gmtOffset);
 
-            return _swissEphemerisService.GetChartData(birthDateTime, longitude, latitude);
+            return _swissEphemerisService.GetChart(birthDateTime, longitude, latitude, houseSystem, out var error);
         }
 
-
-        public async Task<List<AspectInfo>> GetDayTransit(DateTime birthDate, TimeSpan birthGmtOffset, DateTime processDateTime, double longitude, double latitude)
+        public async Task<List<AspectInfo>> GetDirectionAspects(DateTime birthDate, TimeSpan birthGmtOffset, DateTime processDateTime, double longitude, double latitude, HouseSystemEnum houseSystem)
         {
-            //TODO async
-            var aspects = ProcessTodayTransit(birthDate, birthGmtOffset, processDateTime, longitude, latitude);
-
-            return aspects;
-        }
-
-        public async Task<List<AspectInfo>> GetDirection(DateTime birthDate, TimeSpan birthGmtOffset, DateTime processDateTime, double longitude, double latitude)
-        {
-            //TODO async
-            //var aspects = ProcessTodayTransit(birthDate, birthGmtOffset, processDateTime, longitude, latitude);
-
-            //planets aspects (without moon)
             var natalDateTime = (birthDate - birthGmtOffset);
             var directionDateTime = (processDateTime - birthGmtOffset);
 
             //TODO await
-            var natalChart = _swissEphemerisService.GetChartData(natalDateTime, longitude, latitude);
+            var natalChart = _swissEphemerisService.GetChart(natalDateTime, longitude, latitude, houseSystem, out var error);
             var directionChart = GetDirectionChart(natalChart, natalDateTime, directionDateTime);
 
-            var aspects = _swissEphemerisService.GetAspects(natalChart, directionChart, ChartTypeEnum.Direction);
+            var aspects = _commonHelper.GetDirectionAspects(natalChart, directionChart);
 
             return aspects;
         }
@@ -98,34 +87,22 @@ namespace AstroTBotService.AstroCalculation.Services
             return directionChart;
         }
 
-
-        public async Task<List<AspectInfo>> GetNatalChartAspects(DateTime birthDate, TimeSpan birthGmtOffset, double longitude, double latitude)
+        public async Task<List<AspectInfo>> GetNatalAspects(ChartInfo chartInfo)
         {
-            //TODO await
-            var birthChart = await GetChartInfo(birthDate, birthGmtOffset, longitude, latitude);
-
-            var aspects = _swissEphemerisService.GetNatalAspects(birthChart);
-
-            return aspects;
+            return _commonHelper.GetNatalAspects(chartInfo);
         }
 
-        public async Task<List<AspectInfo>> GetNatalChartAspects(ChartInfo chartInfo)
-        {
-            //TODO async
-            return _swissEphemerisService.GetNatalAspects(chartInfo);
-        }
-
-        private List<AspectInfo> ProcessTodayTransit(DateTime birthDate, TimeSpan birthGmtOffset, DateTime processDateTime, double longitude, double latitude)
+        public async Task<List<AspectInfo>> GetTransitAspects(DateTime birthDate, TimeSpan birthGmtOffset, DateTime processDateTime, TimeSpan interval, double longitude, double latitude, HouseSystemEnum houseSystem)
         {
             //planets aspects (without moon)
             var natalDateTime = (birthDate - birthGmtOffset);
             var transitDateTime = (processDateTime - birthGmtOffset);
 
             //TODO await
-            var natalChart = _swissEphemerisService.GetChartData(natalDateTime, longitude, latitude);
-            var transitChart = _swissEphemerisService.GetChartData(transitDateTime, longitude, latitude);
+            var natalChart = _swissEphemerisService.GetChart(natalDateTime, longitude, latitude, houseSystem, out var natalError);
+            var transitChart = _swissEphemerisService.GetChart(transitDateTime, longitude, latitude, houseSystem, out var transitError);
 
-            var planetsAspects = _swissEphemerisService.GetTransitAspects(
+            var planetsAspects = _commonHelper.GetTransitAspects(
                 natalChart,
                 transitChart,
                 PlanetEnum.Sun,
@@ -138,11 +115,22 @@ namespace AstroTBotService.AstroCalculation.Services
                 PlanetEnum.Neptune,
                 PlanetEnum.Pluto);
 
-            //moon aspects
+            //calculate moon aspects
             var startUtcDate = processDateTime;
-            var endUtcDate = startUtcDate.AddDays(1);
+            var endUtcDate = startUtcDate.AddTicks(interval.Ticks);
 
-            var moonAspects = _swissEphemerisService.GetTransitMoonAspects(natalChart, startUtcDate, endUtcDate);
+            var moonDaysInfo = new Dictionary<DateTime, PlanetInfo>();
+            var moonStep = new TimeSpan(1, 0, 0);
+
+            while (startUtcDate < endUtcDate)
+            {
+                var moonTransit = _swissEphemerisService.GetPlanetInfo(PlanetEnum.Moon, startUtcDate, out var error);
+                moonDaysInfo.Add(startUtcDate, moonTransit);
+
+                startUtcDate = startUtcDate.AddTicks(moonStep.Ticks);
+            }
+
+            var moonAspects = _commonHelper.GetTransitPlanetAspects(natalChart, moonDaysInfo, PlanetEnum.Moon);
 
             //result aspects
             var resultAspects = new List<AspectInfo>();
@@ -152,39 +140,5 @@ namespace AstroTBotService.AstroCalculation.Services
 
             return resultAspects;
         }
-
-        //private DailyForecastMessage ConvertToRmqMessage(string messageId, List<AspectInfo> aspects, DateTime dateTime)
-        //{
-        //    var rmqMesage = new DailyForecastMessage();
-
-        //    rmqMesage.Id = messageId;
-        //    rmqMesage.DateTime = dateTime;
-
-        //    rmqMesage.Aspects = new List<RmqMessageAspect>();
-
-        //    foreach (var aspect in aspects)
-        //    {
-        //        var rmqMessageAspect = new RmqMessageAspect()
-        //        {
-        //            NatalPlanet = aspect.NatalPlanet.Planet.ToString(),
-        //            NatalZodiac = aspect.NatalPlanet.Zodiac.ToString(),
-        //            NatalZodiacAngles = aspect.NatalPlanet.ZodiacAngles,
-        //            IsNatalRetro = aspect.NatalPlanet.IsRetro,
-
-        //            TransitPlanet = aspect.TransitPlanet.Planet.ToString(),
-        //            TransitZodiac = aspect.TransitPlanet.Zodiac.ToString(),
-        //            TransitZodiacAngles = aspect.TransitPlanet.ZodiacAngles,
-        //            IsTransitRetro = aspect.TransitPlanet.IsRetro,
-
-        //            Aspect = aspect.Aspect.ToString(),
-        //            StartDate = aspect.StartDate,
-        //            EndDate = aspect.EndDate
-        //        };
-
-        //        rmqMesage.Aspects.Add(rmqMessageAspect);
-        //    }
-
-        //    return rmqMesage;
-        //}
     }
 }

@@ -5541,4 +5541,19 @@ This time is also favorable for social relations and business activities related
   <data name="DirectionAspectsInfo" xml:space="preserve">
     <value>Direction forecast for today</value>
   </data>
+  <data name="ChooseHousesSystem" xml:space="preserve">
+    <value>Choose houses system</value>
+  </data>
+  <data name="Koch" xml:space="preserve">
+    <value>Koch</value>
+  </data>
+  <data name="Placidus" xml:space="preserve">
+    <value>Placidus</value>
+  </data>
+  <data name="Porphyry" xml:space="preserve">
+    <value>Porphyry</value>
+  </data>
+  <data name="YourHousesSystem" xml:space="preserve">
+    <value>Houses system</value>
+  </data>
 </root>

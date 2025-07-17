@@ -1,4 +1,5 @@
 ﻿using AstroTBotService.Db.Entities;
+using AstroTBotService.Enums;
 using System.Globalization;
 using Telegram.Bot.Types;
 
@@ -23,5 +24,7 @@ namespace AstroTBotService.Entities
 
         public double? Longitude { get; set; }
         public double? Latitude { get; set; }
+
+        public HouseSystemEnum HouseSystem { get; set; }
     }
 }

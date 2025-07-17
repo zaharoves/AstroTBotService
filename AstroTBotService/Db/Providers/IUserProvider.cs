@@ -14,6 +14,8 @@ namespace AstroTBotService.Db.Providers
         Task EditBirthday(long userId, DateTime? birthDateTime, TimeSpan? gmtOffset);
         Task EditLanguage(long userId, string? language);
         Task EditLocation(long userId, double? longitude, double? latitude);
+        Task EditHouseSystem(long userId, HouseSystemEnum houseSystem);
+
 
         Task SetUserStage(long userId, ChatStageEnum? stageString);
 

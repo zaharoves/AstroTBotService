@@ -1,14 +1,11 @@
 ﻿using AstroTBotService.AstroCalculation.Entities;
+using AstroTBotService.Common;
 using AstroTBotService.Configurations;
 using AstroTBotService.Db.Entities;
 using AstroTBotService.Db.Providers;
 using AstroTBotService.Enums;
-using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.Extensions.Options;
 using SwissEphNet;
-using Telegram.Bot.Types.Enums;
-using static AstroTBotService.Constants.UI.Icons;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AstroTBotService.AstroCalculation.Services
 {
@@ -21,16 +18,16 @@ namespace AstroTBotService.AstroCalculation.Services
         private readonly int _swissPositionType = SwissEph.SEFLG_TRUEPOS | SwissEph.SEFLG_SWIEPH | SwissEph.SEFLG_SPEED; //SwissEph.SEFLG_TRUEPOS
 
         private SwissEph _swissEphemeris = new SwissEph();
+        
+        private readonly ICommonHelper _commonHelper;
         private readonly IEphemerisProvider _ephemerisProvider;
 
-        private readonly Dictionary<PlanetEnum, AspectOrbDictionary> _natalOrbDictionary;
-        private readonly Dictionary<PlanetEnum, AspectOrbDictionary> _transitOrbDictionary;
-        private readonly Dictionary<PlanetEnum, AspectOrbDictionary> _directionOrbDictionary;
-
         public SwissEphemerisService(
-            IOptions<AstroConfig> astroConfiguration,
+            ICommonHelper commonHelper,
             IEphemerisProvider ephemerisProvider)
         {
+            _commonHelper = commonHelper;
+
             //Установка пути к файлам эфемерид
             //SwissEph sw = new SwissEph("C\\:\\ephe");
             try
@@ -42,57 +39,6 @@ namespace AstroTBotService.AstroCalculation.Services
             {
                 var a = 1;
             }
-
-            _natalOrbDictionary = new Dictionary<PlanetEnum, AspectOrbDictionary>()
-            {
-                {PlanetEnum.Sun, new AspectOrbDictionary(astroConfiguration.Value.NatalOrbs.Sun)},
-                {PlanetEnum.Moon, new AspectOrbDictionary(astroConfiguration.Value.NatalOrbs.Moon)},
-
-                {PlanetEnum.Mercury, new AspectOrbDictionary(astroConfiguration.Value.NatalOrbs.Mercury)},
-                {PlanetEnum.Venus, new AspectOrbDictionary(astroConfiguration.Value.NatalOrbs.Venus)},
-                {PlanetEnum.Mars, new AspectOrbDictionary(astroConfiguration.Value.NatalOrbs.Mars)},
-
-                {PlanetEnum.Jupiter, new AspectOrbDictionary(astroConfiguration.Value.NatalOrbs.Jupiter)},
-                {PlanetEnum.Saturn, new AspectOrbDictionary(astroConfiguration.Value.NatalOrbs.Saturn)},
-
-                {PlanetEnum.Uran, new AspectOrbDictionary(astroConfiguration.Value.NatalOrbs.Uran)},
-                {PlanetEnum.Neptune, new AspectOrbDictionary(astroConfiguration.Value.NatalOrbs.Neptune)},
-                {PlanetEnum.Pluto, new AspectOrbDictionary(astroConfiguration.Value.NatalOrbs.Pluto)}
-            };
-
-            _transitOrbDictionary = new Dictionary<PlanetEnum, AspectOrbDictionary>()
-            {
-                {PlanetEnum.Sun, new AspectOrbDictionary(astroConfiguration.Value.TransitOrbs.Sun)},
-                {PlanetEnum.Moon, new AspectOrbDictionary(astroConfiguration.Value.TransitOrbs.Moon)},
-
-                {PlanetEnum.Mercury, new AspectOrbDictionary(astroConfiguration.Value.TransitOrbs.Mercury)},
-                {PlanetEnum.Venus, new AspectOrbDictionary(astroConfiguration.Value.TransitOrbs.Venus)},
-                {PlanetEnum.Mars, new AspectOrbDictionary(astroConfiguration.Value.TransitOrbs.Mars)},
-
-                {PlanetEnum.Jupiter, new AspectOrbDictionary(astroConfiguration.Value.TransitOrbs.Jupiter)},
-                {PlanetEnum.Saturn, new AspectOrbDictionary(astroConfiguration.Value.TransitOrbs.Saturn)},
-
-                {PlanetEnum.Uran, new AspectOrbDictionary(astroConfiguration.Value.TransitOrbs.Uran)},
-                {PlanetEnum.Neptune, new AspectOrbDictionary(astroConfiguration.Value.TransitOrbs.Neptune)},
-                {PlanetEnum.Pluto, new AspectOrbDictionary(astroConfiguration.Value.TransitOrbs.Pluto)}
-            };
-
-            _directionOrbDictionary = new Dictionary<PlanetEnum, AspectOrbDictionary>()
-            {
-                {PlanetEnum.Sun, new AspectOrbDictionary(astroConfiguration.Value.DirectionOrbs.Sun)},
-                {PlanetEnum.Moon, new AspectOrbDictionary(astroConfiguration.Value.DirectionOrbs.Moon)},
-
-                {PlanetEnum.Mercury, new AspectOrbDictionary(astroConfiguration.Value.DirectionOrbs.Mercury)},
-                {PlanetEnum.Venus, new AspectOrbDictionary(astroConfiguration.Value.DirectionOrbs.Venus)},
-                {PlanetEnum.Mars, new AspectOrbDictionary(astroConfiguration.Value.DirectionOrbs.Mars)},
-
-                {PlanetEnum.Jupiter, new AspectOrbDictionary(astroConfiguration.Value.DirectionOrbs.Jupiter)},
-                {PlanetEnum.Saturn, new AspectOrbDictionary(astroConfiguration.Value.DirectionOrbs.Saturn)},
-
-                {PlanetEnum.Uran, new AspectOrbDictionary(astroConfiguration.Value.DirectionOrbs.Uran)},
-                {PlanetEnum.Neptune, new AspectOrbDictionary(astroConfiguration.Value.DirectionOrbs.Neptune)},
-                {PlanetEnum.Pluto, new AspectOrbDictionary(astroConfiguration.Value.DirectionOrbs.Pluto)}
-            };
 
             _ephemerisProvider = ephemerisProvider;
         }
@@ -152,339 +98,88 @@ namespace AstroTBotService.AstroCalculation.Services
             return (info, result);
         }
 
-        public ChartInfo GetChartData(DateTime dateTime, double logitude, double latitude)
+        public ChartInfo GetChart(DateTime dateTime, double logitude, double latitude, HouseSystemEnum houseSystem, out string error)
         {
-            return GetDayInfo(dateTime, logitude, latitude, out var error);
-        }
+            error = string.Empty;
 
-        public List<AspectInfo> GetAspects(ChartInfo natalChart, ChartInfo transitChart, ChartTypeEnum chartType)
-        {
-            var aspects = new List<AspectInfo>();
+            var chart = new ChartInfo(dateTime);
 
-            foreach (var natalPlanet in natalChart.Planets.Values)
-            {
-                foreach (var transitPlanet in transitChart.Planets.Values)
-                {
-                    var aspectInfo = GetAspect(natalPlanet, transitPlanet, chartType);
+            // Convert date to Julian date
+            double minutePart = (dateTime.Minute / 60.0);
+            double secondPart = (dateTime.Second / 3600.0);
+            double day = _swissEphemeris.swe_julday(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour + minutePart + secondPart, _swissCalendarType);
 
-                    if (aspectInfo.Aspect != AspectEnum.None)
-                    {
-                        aspects.Add(aspectInfo);
-                    }
-
-                }
-            }
-
-            return aspects;
-        }
-
-        public List<AspectInfo> GetTransitAspects(ChartInfo natalChart, ChartInfo transitChart, params PlanetEnum[] transitPlanets)
-        {
-            var aspects = new List<AspectInfo>();
-
-            foreach (var transitPlanet in transitChart.Planets.Values)
-            {
-                foreach (var natalPlanet in natalChart.Planets.Values)
-                {
-
-                    if (!transitPlanets.Contains(transitPlanet.Planet))
-                    {
-                        continue;
-                    }
-                    var aspectInfo = GetAspect(natalPlanet, transitPlanet, ChartTypeEnum.Transit);
-
-                    if (aspectInfo.Aspect != AspectEnum.None)
-                    {
-                        aspects.Add(aspectInfo);
-                    }
-
-                }
-            }
-
-            return aspects;
-        }
-
-        public List<AspectInfo> GetNatalAspects(ChartInfo natalChart)
-        {
-            var processedPlanetList = new List<PlanetEnum>();
-
-            var aspects = new List<AspectInfo>();
-
-            foreach (var natalPlanet in natalChart.Planets.Values)
-            {
-                foreach (var processPlanet in natalChart.Planets.Values)
-                {
-                    if (natalPlanet.Planet == processPlanet.Planet
-                        || processedPlanetList.Contains(processPlanet.Planet))
-                    {
-                        continue;
-                    }
-
-                    var aspectInfo = GetAspect(natalPlanet, processPlanet, ChartTypeEnum.Natal);
-
-                    if (aspectInfo.Aspect != AspectEnum.None)
-                    {
-                        aspects.Add(aspectInfo);
-                    }
-
-                }
-
-                processedPlanetList.Add(natalPlanet.Planet);
-            }
-
-            return aspects;
-        }
-
-        public AspectInfo GetAspect(PlanetInfo natalPlanet, PlanetInfo transitPlanet, ChartTypeEnum chartType)
-        {
-            var ordDictionary =  new Dictionary<PlanetEnum, AspectOrbDictionary>();
-
-            switch (chartType)
-            {
-                case ChartTypeEnum.Natal:
-                    ordDictionary = _natalOrbDictionary;
-                    break;
-                case ChartTypeEnum.Transit:
-                    ordDictionary = _transitOrbDictionary;
-                    break;
-                case ChartTypeEnum.Direction:
-                    ordDictionary = _directionOrbDictionary;
-                    break;
-            }
-
-            if (!ordDictionary.TryGetValue(natalPlanet.Planet, out var aspectsOrb))
-            {
-                return new AspectInfo(natalPlanet, transitPlanet, AspectEnum.None);
-            }
-
-            var angles = Math.Abs(natalPlanet.AbsolutAngles - transitPlanet.AbsolutAngles);
-
-            if (angles >= aspectsOrb[AspectEnum.Conjunction].Min && angles <= Constants.CIRCLE_ANGLES ||
-               angles <= aspectsOrb[AspectEnum.Conjunction].Max && angles >= Constants.ZODIAC_ZERO)
-            {
-                return new AspectInfo(natalPlanet, transitPlanet, AspectEnum.Conjunction);
-            }
-            else if (angles >= aspectsOrb[AspectEnum.Sextile].Min && angles <= aspectsOrb[AspectEnum.Sextile].Max ||
-                angles >= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Sextile].Max) && angles <= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Sextile].Min))
-            {
-                return new AspectInfo(natalPlanet, transitPlanet, AspectEnum.Sextile);
-            }
-            else if (angles >= aspectsOrb[AspectEnum.Square].Min && angles <= aspectsOrb[AspectEnum.Square].Max ||
-                angles >= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Square].Max) && angles <= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Square].Min))
-            {
-                return new AspectInfo(natalPlanet, transitPlanet, AspectEnum.Square);
-            }
-            else if (angles >= aspectsOrb[AspectEnum.Trine].Min && angles <= aspectsOrb[AspectEnum.Trine].Max ||
-                angles >= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Trine].Max) && angles <= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Trine].Min))
-            {
-                return new AspectInfo(natalPlanet, transitPlanet, AspectEnum.Trine);
-            }
-            else if (angles >= aspectsOrb[AspectEnum.Opposition].Min && angles <= aspectsOrb[AspectEnum.Opposition].Max ||
-                angles >= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Opposition].Max) && angles <= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Opposition].Min))
-            {
-                return new AspectInfo(natalPlanet, transitPlanet, AspectEnum.Opposition);
-            }
-
-            return new AspectInfo(natalPlanet, transitPlanet, AspectEnum.None);
-        }
-
-        public List<AspectInfo> GetTransitMoonAspects(ChartInfo natalChart, DateTime startUtcDate, DateTime endUtcDate)
-        {
-            if (startUtcDate >= endUtcDate)
-            {
-                return new List<AspectInfo>();
-            }
-
-            //calculate moon info
-            var moonTransitDict = new Dictionary<DateTime, PlanetInfo>();
-
-            while (startUtcDate < endUtcDate)
-            {
-                var moonTransit = GetDayInfo(PlanetEnum.Moon, startUtcDate, out var error);
-                moonTransitDict.Add(startUtcDate, moonTransit);
-
-                startUtcDate = startUtcDate.AddHours(1);
-            }
-
-            //calculate aspects
-            var aspects = new List<AspectInfo>();
-
+            //Fill planets info
             foreach (var planetEnum in Enum.GetValues(typeof(PlanetEnum)).Cast<PlanetEnum>())
             {
-                var natalPlanetInfo = natalChart.Planets[planetEnum];
+                var planetInfo = GetPlanetInfo(planetEnum, day, _swissPositionType, out error);
+                chart.Planets.Add(planetEnum, planetInfo);
+            }
 
-                var moonTransitInfo = new PlanetInfo(PlanetEnum.Moon, 0);
+            double[] cusps = new double[13]; // Houses cuspids (1 - 12)
+            double[] ascmc = new double[10]; // ASC, MC and others
 
-                var foundedAspect = AspectEnum.None;
-                var startTime = DateTime.UtcNow;
-                var endTime = DateTime.UtcNow;
+            char swissHouseSystem = GetSwissHouseSystem(houseSystem);
 
-                foreach (var moonTransit in moonTransitDict)
+            _swissEphemeris.swe_houses(day, latitude, logitude, swissHouseSystem, cusps, ascmc);
+
+            //Fill houses info
+            foreach (var houseEnum in Enum.GetValues(typeof(HouseEnum)).Cast<HouseEnum>())
+            {
+                if (houseEnum == HouseEnum.None)
                 {
-                    var currentAspectInfo = GetAspect(natalPlanetInfo, moonTransit.Value, ChartTypeEnum.Transit);
-
-                    if (currentAspectInfo.Aspect != AspectEnum.None && foundedAspect == AspectEnum.None)
-                    {
-                        startTime = moonTransit.Key;
-                        moonTransitInfo = moonTransit.Value;
-                        foundedAspect = currentAspectInfo.Aspect;
-                    }
-                    else if (currentAspectInfo.Aspect == AspectEnum.None && foundedAspect != AspectEnum.None)
-                    {
-                        endTime = moonTransit.Key;
-
-                        var newAspect = new AspectInfo(natalPlanetInfo, moonTransitInfo, foundedAspect, startTime, endTime);
-                        aspects.Add(newAspect);
-
-                        foundedAspect = AspectEnum.None;
-                    }
+                    continue;
                 }
+
+                var houseInfo = new PositionInfo(cusps[(int)houseEnum]);
+                chart.Houses.Add(houseEnum, houseInfo);
             }
 
-            return aspects;
+            //Fill planets houses info
+            FillPlanetsHousesInfo(chart);
+
+            return chart;
         }
 
-
-
-
-
-
-
-
-
-
-        //Нужен ли Dictionary?
-        public Dictionary<DateTime, ChartInfo> GetData(DateTime startTime, DateTime endTime, TimeSpan interval, double logitude, double latitude)
+        private PlanetInfo GetPlanetInfo(PlanetEnum planetEnum, double day, int iflag, out string error)
         {
-            if (startTime >= endTime)
+            var info = new double[6];
+            error = string.Empty;
+
+            var result = _swissEphemeris.swe_calc_ut(day, ConvertPlanetToSwiss(planetEnum), iflag, info, ref error);
+
+            if (result != SwissEph.OK)
             {
-                return null; ;
+                //Console.WriteLine($"Ошибка при расчете: {error}");
             }
 
-            var currentTime = startTime;
+            var planetInfo = new PlanetInfo(planetEnum, info[0], info[3]);
 
-            var daysInfo = new Dictionary<DateTime, ChartInfo>();
-
-            while (currentTime < endTime)
-            {
-                var dayInfo = GetDayInfo(currentTime, logitude, latitude, out var error);
-                daysInfo.Add(currentTime, dayInfo);
-
-                currentTime = currentTime.Add(interval);
-            }
-
-            _swissEphemeris.swe_close();
-
-            return daysInfo;
+            return planetInfo;
         }
 
-        //public Dictionary<DateTime, List<AspectInfo>> ProcessAspects0(ChartInfo birthDayInfo, List<ChartInfo> transitList)
-        //{
-        //    var dict = new Dictionary<DateTime, List<AspectInfo>>();
+        
 
-        //    //natal planet
-        //    foreach (var natalPlanet in birthDayInfo.Planets.Values)
-        //    {
-        //        //transit date time
-        //        foreach (var transit in transitList)
-        //        {
-        //            //transit planet
-        //            foreach (var transitPlanet in transit.Planets.Values)
-        //            {
-        //                var aspect = GetAspect(natalPlanet, transitPlanet);
+        
 
-        //                if (aspect.Aspect == AspectEnum.None)
-        //                {
-        //                    continue;
-        //                }
+        
 
-        //                if (dict.TryGetValue(transit.DateTime, out var aspectList))
-        //                {
-        //                    aspectList.Add(aspect);
-        //                }
-        //                else
-        //                {
-        //                    dict.Add(transit.DateTime, new List<AspectInfo>() { aspect });
-        //                }
-        //            }
-        //        }
-        //    }
+        
 
-        //    return dict;
-        //}
+        
 
-        //public List<PlanetMain> ProcessAspects(ChartInfo birthDayInfo, List<ChartInfo> transitList)
-        //{
-        //    var planetMainList = new List<PlanetMain>();
 
-        //    //natal planet
-        //    foreach (var natalPlanet in birthDayInfo.Planets.Values)
-        //    {
-        //        var planetMain = new PlanetMain(natalPlanet.Planet);
 
-        //        //transit date time
-        //        foreach (var transit in transitList)
-        //        {
-        //            var aspects = new List<AspectInfo>();
 
-        //            //transit planet
-        //            foreach (var transitPlanet in transit.Planets.Values)
-        //            {
-        //                var aspect = GetAspect(natalPlanet, transitPlanet);
 
-        //                if (aspect.Aspect == AspectEnum.None)
-        //                {
-        //                    continue;
-        //                }
 
-        //                aspects.Add(aspect);
-        //            }
 
-        //            planetMain.Aspects.Add(transit.DateTime, aspects);
-        //        }
 
-        //        planetMainList.Add(planetMain);
-        //    }
 
-        //    return planetMainList;
-        //}
 
-        //public Dictionary<DateTime, List<AspectInfo>> ProcessAspects2(ChartInfo birthDayInfo, List<ChartInfo> transitList)
-        //{
-        //    var dict = new Dictionary<DateTime, List<AspectInfo>>();
+        
 
-        //    //natal planet
-        //    foreach (var natalPlanet in birthDayInfo.Planets.Values)
-        //    {
-        //        //transit date time
-        //        foreach (var transit in transitList)
-        //        {
-        //            //transit planet
-        //            foreach (var transitPlanet in transit.Planets.Values)
-        //            {
-        //                var aspect = GetAspect(natalPlanet, transitPlanet);
-
-        //                if (aspect.Aspect == AspectEnum.None)
-        //                {
-        //                    continue;
-        //                }
-
-        //                if (dict.TryGetValue(transit.DateTime, out var aspectList))
-        //                {
-        //                    aspectList.Add(aspect);
-        //                }
-        //                else
-        //                {
-        //                    dict.Add(transit.DateTime, new List<AspectInfo>() { aspect });
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    return dict;
-        //}
-
-        public void FillEphemeris(DateTime startDate, DateTime endDate, TimeSpan interval, double logitude, double latitude)
+        public void FillEphemeris(DateTime startDate, DateTime endDate, TimeSpan interval, double logitude, double latitude, HouseSystemEnum houseSystem)
         {
             var saveDbTimeSpan = new TimeSpan(1, 0, 0, 0);
 
@@ -493,30 +188,30 @@ namespace AstroTBotService.AstroCalculation.Services
 
             while (startIntervalDate < endDate)
             {
-                var dict = GetData(startIntervalDate, endIntervalDate, interval, logitude, latitude);
+                var charts = GetCharts(startIntervalDate, endIntervalDate, interval, logitude, latitude, houseSystem);
 
                 var ephList = new List<Ephemeris>();
 
-                foreach (var dtInfo in dict)
+                foreach (var chart in charts)
                 {
                     var ephDb = new Ephemeris()
                     {
-                        Id = long.Parse($"{dtInfo.Key.ToUniversalTime().ToString("yyyyMMddHHmmss")}"),
-                        DateTime = dtInfo.Key.ToUniversalTime(),
+                        Id = long.Parse($"{chart.DateTime.ToUniversalTime().ToString("yyyyMMddHHmmss")}"),
+                        DateTime = chart.DateTime.ToUniversalTime(),
 
-                        SunAngles = dtInfo.Value.Planets[PlanetEnum.Sun].AbsolutAngles,
-                        MoonAngles = dtInfo.Value.Planets[PlanetEnum.Moon].AbsolutAngles,
+                        SunAngles = chart.ChartInfo.Planets[PlanetEnum.Sun].AbsolutAngles,
+                        MoonAngles = chart.ChartInfo.Planets[PlanetEnum.Moon].AbsolutAngles,
 
-                        MercuryAngles = dtInfo.Value.Planets[PlanetEnum.Mercury].AbsolutAngles,
-                        VenusAngles = dtInfo.Value.Planets[PlanetEnum.Venus].AbsolutAngles,
-                        MarsAngles = dtInfo.Value.Planets[PlanetEnum.Mars].AbsolutAngles,
+                        MercuryAngles = chart.ChartInfo.Planets[PlanetEnum.Mercury].AbsolutAngles,
+                        VenusAngles = chart.ChartInfo.Planets[PlanetEnum.Venus].AbsolutAngles,
+                        MarsAngles = chart.ChartInfo.Planets[PlanetEnum.Mars].AbsolutAngles,
 
-                        JupiterAngles = dtInfo.Value.Planets[PlanetEnum.Jupiter].AbsolutAngles,
-                        SaturnAngles = dtInfo.Value.Planets[PlanetEnum.Saturn].AbsolutAngles,
+                        JupiterAngles = chart.ChartInfo.Planets[PlanetEnum.Jupiter].AbsolutAngles,
+                        SaturnAngles = chart.ChartInfo.Planets[PlanetEnum.Saturn].AbsolutAngles,
 
-                        UranAngles = dtInfo.Value.Planets[PlanetEnum.Uran].AbsolutAngles,
-                        NeptuneAngles = dtInfo.Value.Planets[PlanetEnum.Neptune].AbsolutAngles,
-                        PlutoAngles = dtInfo.Value.Planets[PlanetEnum.Pluto].AbsolutAngles
+                        UranAngles = chart.ChartInfo.Planets[PlanetEnum.Uran].AbsolutAngles,
+                        NeptuneAngles = chart.ChartInfo.Planets[PlanetEnum.Neptune].AbsolutAngles,
+                        PlutoAngles = chart.ChartInfo.Planets[PlanetEnum.Pluto].AbsolutAngles
                     };
 
                     ephList.Add(ephDb);
@@ -527,8 +222,31 @@ namespace AstroTBotService.AstroCalculation.Services
                 startIntervalDate = startIntervalDate.Add(saveDbTimeSpan);
                 endIntervalDate = endIntervalDate.Add(saveDbTimeSpan);
             }
+        }
 
+        private List<(DateTime DateTime, ChartInfo ChartInfo)> GetCharts(DateTime startTime, DateTime endTime, TimeSpan interval, double logitude, double latitude, HouseSystemEnum houseSystem)
+        {
+            if (startTime >= endTime)
+            {
+                return new List<(DateTime DateTime, ChartInfo ChartInfo)>();
+            }
 
+            var currentTime = startTime;
+
+            var daysInfo = new List<(DateTime, ChartInfo)>();
+
+            while (currentTime < endTime)
+            {
+                var chartInfo = GetChart(currentTime, logitude, latitude, houseSystem, out var error);
+
+                daysInfo.Add((currentTime, chartInfo));
+
+                currentTime = currentTime.Add(interval);
+            }
+
+            _swissEphemeris.swe_close();
+
+            return daysInfo;
         }
 
         private int ConvertPlanetToSwiss(PlanetEnum planetEnum)
@@ -560,48 +278,9 @@ namespace AstroTBotService.AstroCalculation.Services
             }
         }
 
-        private ChartInfo GetDayInfo(DateTime dateTime, double logitude, double latitude, out string error)
-        {
-            error = string.Empty;
-            var dayInfo = new ChartInfo(dateTime);
+        
 
-            // Преобразует дату и время в юлианскую дату
-            double minutePart = (dateTime.Minute / 60.0);
-            double secondPart = (dateTime.Second / 3600.0);
-            double day = _swissEphemeris.swe_julday(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour + minutePart + secondPart, _swissCalendarType);
-
-            //Fill planets info
-            foreach (var planetEnum in Enum.GetValues(typeof(PlanetEnum)).Cast<PlanetEnum>())
-            {
-                var planetInfo = GetPlanetInfo(planetEnum, day, _swissPositionType, out error);
-                dayInfo.Planets.Add(planetEnum, planetInfo);
-            }
-
-            double[] cusps = new double[13]; // Куспиды домов (от 1 до 12)
-            double[] ascmc = new double[10]; // Asc, MC и другие точки
-            char houseSystem = 'P'; // Система домов: 'P' = Placidus
-
-            _swissEphemeris.swe_houses(day, latitude, logitude, houseSystem, cusps, ascmc);
-
-            //Fill houses info
-            foreach (var houseEnum in Enum.GetValues(typeof(HouseEnum)).Cast<HouseEnum>())
-            {
-                if (houseEnum == HouseEnum.None)
-                {
-                    continue;
-                }
-
-                var houseInfo = new PositionInfo(cusps[(int)houseEnum]);
-                dayInfo.Houses.Add(houseEnum, houseInfo);
-            }
-
-            //Fill planets houses info
-            FillPlanetsHousesInfo(dayInfo);
-
-            return dayInfo;
-        }
-
-        public PlanetInfo GetDayInfo(PlanetEnum planetEnum, DateTime dateTime, out string error)
+        public PlanetInfo GetPlanetInfo(PlanetEnum planetEnum, DateTime dateTime, out string error)
         {
             error = string.Empty;
 
@@ -615,21 +294,22 @@ namespace AstroTBotService.AstroCalculation.Services
             return planetInfo;
         }
 
-        private PlanetInfo GetPlanetInfo(PlanetEnum planetEnum, double day, int iflag, out string error)
+        
+
+        private char GetSwissHouseSystem(HouseSystemEnum houseSystem)
         {
-            var info = new double[6];
-            error = string.Empty;
-
-            var result = _swissEphemeris.swe_calc_ut(day, ConvertPlanetToSwiss(planetEnum), iflag, info, ref error);
-
-            if (result != SwissEph.OK)
+            switch (houseSystem)
             {
-                //Console.WriteLine($"Ошибка при расчете: {error}");
+                case HouseSystemEnum.Placidus:
+                    return 'P';
+                case HouseSystemEnum.Porphyry:
+                    return 'O';
+                case HouseSystemEnum.Koch:
+                    return 'K';
+                default:
+                    //TODO Log
+                    return 'P';
             }
-
-            var planetInfo = new PlanetInfo(planetEnum, info[0], info[3]);
-
-            return planetInfo;
         }
 
         private void FillPlanetsHousesInfo(ChartInfo chartInfo)

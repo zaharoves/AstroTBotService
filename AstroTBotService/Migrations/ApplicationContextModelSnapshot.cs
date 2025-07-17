@@ -33,6 +33,9 @@ namespace AstroTBotService.Migrations
                     b.Property<TimeSpan?>("GmtOffset")
                         .HasColumnType("interval");
 
+                    b.Property<int>("HouseSystem")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Language")
                         .HasColumnType("text");
 

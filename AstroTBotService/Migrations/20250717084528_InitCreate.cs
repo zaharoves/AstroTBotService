@@ -20,6 +20,7 @@ namespace AstroTBotService.Migrations
                     BirthDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     GmtOffset = table.Column<TimeSpan>(type: "interval", nullable: true),
                     Language = table.Column<string>(type: "text", nullable: true),
+                    HouseSystem = table.Column<int>(type: "integer", nullable: false),
                     Longitude = table.Column<double>(type: "double precision", nullable: true),
                     Latitude = table.Column<double>(type: "double precision", nullable: true)
                 },

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using AstroTBotService.Enums;
 
 
 namespace AstroTBotService.Db.Entities
@@ -19,6 +20,8 @@ namespace AstroTBotService.Db.Entities
 
         public TimeSpan? GmtOffset { get; set; }
         public string? Language { get; set; }
+
+        public HouseSystemEnum HouseSystem { get; set; } = HouseSystemEnum.Placidus;
 
         public double? Longitude { get; set; }
         public double? Latitude { get; set; }

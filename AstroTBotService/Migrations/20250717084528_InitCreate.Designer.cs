@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AstroTBotService.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    [Migration("20250616091920_InitCreate")]
+    [Migration("20250717084528_InitCreate")]
     partial class InitCreate
     {
         /// <inheritdoc />
@@ -35,6 +35,9 @@ namespace AstroTBotService.Migrations
 
                     b.Property<TimeSpan?>("GmtOffset")
                         .HasColumnType("interval");
+
+                    b.Property<int>("HouseSystem")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Language")
                         .HasColumnType("text");

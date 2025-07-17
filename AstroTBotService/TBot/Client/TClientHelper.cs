@@ -9,16 +9,16 @@ using static AstroTBotService.Constants.UI;
 
 namespace AstroTBotService.TBot
 {
-    public class MainMenuHelper : IMainMenuHelper
+    public class TClientHelper : ITClientHelper
     {
         private readonly ITelegramBotClient _botClient;
         private readonly IResourcesLocaleManager _localeManager;
-        private readonly ILogger<MainMenuHelper> _logger;
+        private readonly ILogger<TClientHelper> _logger;
 
-        public MainMenuHelper(
+        public TClientHelper(
             ITelegramBotClient botClient,
             IResourcesLocaleManager localeManager,
-            ILogger<MainMenuHelper> logger)
+            ILogger<TClientHelper> logger)
         {
             _botClient = botClient;
             _localeManager = localeManager;
@@ -139,17 +139,15 @@ namespace AstroTBotService.TBot
                 replyMarkup: menuInfo.Keyboard);
         }
 
-        public async Task EditToLanguagePicker(TBotClientData clientData)
+        public async Task SendHouseSystemPicker(TBotClientData clientData)
         {
-            var menuInfo = GetChooseLanguageKeyboard(clientData);
+            var menuInfo = GetHousePickerKeyboard(clientData);
 
-            await _botClient.EditMessageText(
+            await _botClient.SendMessage(
                 chatId: clientData.AstroUser.Id,
-                messageId: clientData.Message.Id,
                 text: menuInfo.Message,
                 replyMarkup: menuInfo.Keyboard);
         }
-
 
 
         public InlineKeyboardButton GetCancelButton(TBotClientData clientData)
@@ -193,6 +191,12 @@ namespace AstroTBotService.TBot
                     message += $"\n\n{Constants.UI.Icons.Common.EARTH} {_localeManager.GetString("YourLocation", clientData.CultureInfo)}\n" +
                         $"{_localeManager.GetString("Longitude", clientData.CultureInfo)}: {clientData.AstroUser.Longitude.Value.ToString("F6")}\n" +
                         $"{_localeManager.GetString("Latitude", clientData.CultureInfo)}: {clientData.AstroUser.Latitude.Value.ToString("F6")}";
+
+                    if (clientData.AstroUser.HouseSystem != null)
+                    {
+                        message += $"\n\n{Constants.UI.Icons.Common.HOUSE} {_localeManager.GetString("YourHousesSystem", clientData.CultureInfo)}\n" +
+                            $"{_localeManager.GetString(clientData.AstroUser.HouseSystem.ToString(), clientData.CultureInfo)}";
+                    }
                 }
 
                 message += $"\n\n{_localeManager.GetString("YouCanCalculate", clientData.CultureInfo)}.";
@@ -202,13 +206,12 @@ namespace AstroTBotService.TBot
                 var setLocationButton = new[]
                 {
                     InlineKeyboardButton.WithCallbackData(
-                    $"{Constants.UI.Icons.Common.EARTH} {_localeManager.GetString("SetBirthLocation", clientData.CultureInfo)}",
-                    Constants.UI.ButtonCommands.SET_BIRTH_LOCATION),
+                        $"{Constants.UI.Icons.Common.EARTH} {_localeManager.GetString("SetBirthLocation", clientData.CultureInfo)}",
+                        Constants.UI.ButtonCommands.SET_BIRTH_LOCATION),
                 };
 
-
                 var natalIcon = string.Empty;
-                if(Constants.UI.ChartTypeIconDict.TryGetValue(ChartTypeEnum.Natal, out var _natalIcon))
+                if (Constants.UI.ChartTypeIconDict.TryGetValue(ChartTypeEnum.Natal, out var _natalIcon))
                 {
                     natalIcon = _natalIcon;
                 }
@@ -251,7 +254,7 @@ namespace AstroTBotService.TBot
                     keyboard = GetKeyboard(
                         setLocationButton,
                         natalCharButton,
-                        transitForecastButton, 
+                        transitForecastButton,
                         directionForecastButton);
                 }
                 else
@@ -310,12 +313,37 @@ namespace AstroTBotService.TBot
             return (message, new InlineKeyboardMarkup(buttons));
         }
 
-        public List<string> GetChartMessage(
-            List<AspectInfo> aspects, 
-            TBotClientData clientData, 
+        private (string Message, InlineKeyboardMarkup Keyboard) GetHousePickerKeyboard(TBotClientData clientData)
+        {
+            var message = $"{_localeManager.GetString("ChooseHousesSystem", clientData.CultureInfo)}:";
+
+            var buttons = new List<InlineKeyboardButton[]>();
+
+            foreach (var houseSystem in Enum.GetValues(typeof(HouseSystemEnum)).Cast<HouseSystemEnum>())
+            {
+                buttons.Add(
+                [
+                    InlineKeyboardButton.WithCallbackData(
+                        $"{_localeManager.GetString(houseSystem.ToString(), clientData.CultureInfo)}",
+                        houseSystem.ToString())
+                ]);
+            }
+
+            buttons.Add(
+            [
+                GetCancelButtonWithEdit(clientData)
+            ]);
+
+            return (message, new InlineKeyboardMarkup(buttons));
+        }
+
+
+        public List<string> GetChartMessages(
+            List<AspectInfo> aspects,
+            TBotClientData clientData,
             ChartTypeEnum chartTypeEnum)
         {
-            var returnList = new List<string>();
+            var messages = new List<string>();
 
             var icon = string.Empty;
 
@@ -326,7 +354,7 @@ namespace AstroTBotService.TBot
 
             var chartType = chartTypeEnum.ToString() + "AspectsInfo";
 
-            returnList.Add($"{icon} " +
+            messages.Add($"{icon} " +
                 $"{_localeManager.GetString(chartType, clientData.CultureInfo)}: \n" +
                 $"{clientData.AstroUser.DateToString(clientData.CultureInfo)}\n\n");
 
@@ -388,7 +416,7 @@ namespace AstroTBotService.TBot
                     $"{_localeManager.GetString(aspect.NatalPlanet.Planet.ToString(), clientData.CultureInfo)}" +
                     $"{natalRetroStr}");
 
-                if (chartTypeEnum == ChartTypeEnum.Transit && 
+                if (chartTypeEnum == ChartTypeEnum.Transit &&
                     aspect.TransitPlanet.Planet == PlanetEnum.Moon)
                 {
                     sb.Append($" [{aspect.StartDate.ToString("HH:mm")} - {aspect.EndDate.ToString("HH:mm")}]");
@@ -405,13 +433,13 @@ namespace AstroTBotService.TBot
                 sb.Append(expandableDescription);
                 sb.Append("\n");
 
-                returnList.Add(sb.ToString());
+                messages.Add(sb.ToString());
             }
 
-            return returnList;
+            return messages;
         }
 
-        public string GetPlanetsInfoMessage(ChartInfo chartInfo, TBotClientData clientData)
+        public string GetNatalPlanetsMessage(ChartInfo chartInfo, TBotClientData clientData)
         {
             var sb = new StringBuilder();
 
@@ -462,7 +490,7 @@ namespace AstroTBotService.TBot
             return sb.ToString();
         }
 
-        public string GetHousesInfoMessage(ChartInfo chartInfo, TBotClientData clientData)
+        public string GetHousesMessage(ChartInfo chartInfo, TBotClientData clientData)
         {
             var sb = new StringBuilder();
 

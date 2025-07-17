@@ -91,9 +91,10 @@ namespace AstroTBotService
             public static class MessageCommands
             {
                 public const string START = "/start";
-                public const string CHANGE_LANGUAGE = "/changelanguage";
                 public const string SET_BIRTHDATE = "/setbirthdate";
                 public const string SET_LOCATION = "/setbirthlocation";
+                public const string SET_LANGUAGE = "/setlanguage";
+                public const string SET_HOUSES_SYSTEM = "/sethousessystem";
             }
 
             public static class ButtonCommands
@@ -118,8 +119,6 @@ namespace AstroTBotService
                 public const string DIRECTION_FORECAST = "directionForecast";
 
                 public const string POSITIVE_FORECAST = "positiveForecast";
-
-                public const string CHANGE_LANGUAGE = "changeLanguage";
             }
 
             //TODO COncurrent
@@ -329,6 +328,8 @@ namespace AstroTBotService
                     public const string CLOCK_8 = "🕞";
                     public const string CLOCK_9 = "🕟";
                     public const string CLOCK_10 = "🕠";
+
+                    public const string HOUSE = "🏠";
                 }
 
                 public static class Flags

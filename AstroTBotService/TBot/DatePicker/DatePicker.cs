@@ -8,7 +8,7 @@ namespace AstroTBotService.TBot
     public class DatePicker : IDatePicker
     {
         private readonly ITelegramBotClient _botClient;
-        private readonly IMainMenuHelper _mainMenuHelper;
+        private readonly ITClientHelper _clientHelper;
         private readonly IResourcesLocaleManager _resourcesLocaleManager;
         private readonly IResourcesLocaleManager _localeManager;
 
@@ -16,12 +16,12 @@ namespace AstroTBotService.TBot
 
         public DatePicker(
             ITelegramBotClient botClient,
-            IMainMenuHelper mainMenuHelper,
+            ITClientHelper clientHelper,
             IResourcesLocaleManager resourcesLocaleManager,
             IResourcesLocaleManager localeManager)
         {
             _botClient = botClient;
-            _mainMenuHelper = mainMenuHelper;
+            _clientHelper = clientHelper;
             _resourcesLocaleManager = resourcesLocaleManager;
             _localeManager = localeManager;
         }
@@ -174,7 +174,7 @@ namespace AstroTBotService.TBot
                 },
                 new []
                 {
-                    _mainMenuHelper.GetCancelButtonWithEdit(clientData)
+                    _clientHelper.GetCancelButtonWithEdit(clientData)
                 }
             });
 
@@ -213,7 +213,7 @@ namespace AstroTBotService.TBot
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                _mainMenuHelper.GetCancelButtonWithEdit(clientData)
+                _clientHelper.GetCancelButtonWithEdit(clientData)
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);
@@ -261,7 +261,7 @@ namespace AstroTBotService.TBot
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                _mainMenuHelper.GetCancelButtonWithEdit(clientData)
+                _clientHelper.GetCancelButtonWithEdit(clientData)
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);
@@ -296,7 +296,7 @@ namespace AstroTBotService.TBot
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                _mainMenuHelper.GetCancelButtonWithEdit(clientData)
+                _clientHelper.GetCancelButtonWithEdit(clientData)
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);
@@ -349,7 +349,7 @@ namespace AstroTBotService.TBot
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                _mainMenuHelper.GetCancelButtonWithEdit(clientData)
+                _clientHelper.GetCancelButtonWithEdit(clientData)
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);
@@ -388,7 +388,7 @@ namespace AstroTBotService.TBot
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                _mainMenuHelper.GetCancelButtonWithEdit(clientData)
+                _clientHelper.GetCancelButtonWithEdit(clientData)
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);
@@ -428,7 +428,7 @@ namespace AstroTBotService.TBot
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                _mainMenuHelper.GetCancelButtonWithEdit(clientData)
+                _clientHelper.GetCancelButtonWithEdit(clientData)
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);
@@ -462,7 +462,7 @@ namespace AstroTBotService.TBot
 
             dateTimePicker.Add(new List<InlineKeyboardButton>
             {
-                _mainMenuHelper.GetCancelButtonWithEdit(clientData)
+                _clientHelper.GetCancelButtonWithEdit(clientData)
             });
 
             return new InlineKeyboardMarkup(dateTimePicker);

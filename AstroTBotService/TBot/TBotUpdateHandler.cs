@@ -12,13 +12,14 @@ using Telegram.Bot.Types.ReplyMarkups;
 using Serilog.Context;
 using Serilog.Debugging;
 using Serilog;
+using System;
 
 namespace AstroTBotService.TBot
 {
     public class TBotUpdateHandler : IUpdateHandler
     {
         private readonly ITelegramBotClient _botClient;
-        private readonly IMainMenuHelper _mainMenuHelper;
+        private readonly ITClientHelper _clientHelper;
         private readonly IDatePicker _datePicker;
         private readonly ILocationPicker _locationPicker;
         private readonly IUserProvider _userProvider;
@@ -30,7 +31,7 @@ namespace AstroTBotService.TBot
 
         public TBotUpdateHandler(
             ITelegramBotClient botClient,
-            IMainMenuHelper mainMenuHelper,
+            ITClientHelper clientHelper,
             IDatePicker tBotDatePicker,
             ILocationPicker locationPicker,
             IUserProvider userProvider,
@@ -39,7 +40,7 @@ namespace AstroTBotService.TBot
             ILogger<TBotUpdateHandler> logger)
         {
             _botClient = botClient;
-            _mainMenuHelper = mainMenuHelper;
+            _clientHelper = clientHelper;
             _datePicker = tBotDatePicker;
             _locationPicker = locationPicker;
             _userProvider = userProvider;
@@ -103,7 +104,7 @@ namespace AstroTBotService.TBot
 
             if (ClientData?.Message?.Text?.ToLower() == Constants.UI.MessageCommands.START)
             {
-                await _mainMenuHelper.SendMainMenu(ClientData);
+                await _clientHelper.SendMainMenu(ClientData);
                 await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.MainMenu);
 
                 return;
@@ -118,27 +119,39 @@ namespace AstroTBotService.TBot
                 await SetLocation();
                 return;
             }
-            else if (ClientData?.Message?.Text?.ToLower() == Constants.UI.MessageCommands.CHANGE_LANGUAGE)
+            else if (ClientData?.Message?.Text?.ToLower() == Constants.UI.MessageCommands.SET_LANGUAGE)
             {
-                await ChangeLanguage(MessageTypeEnum.New);
+                await SetLanguage();
                 return;
             }
-            
+            else if (ClientData?.Message?.Text?.ToLower() == Constants.UI.MessageCommands.SET_HOUSES_SYSTEM)
+            {
+                await SetHouseSystem();
+                return;
+            }
+
 
             switch (ClientData.CallbackData)
             {
                 case Constants.UI.ButtonCommands.SEND_MAIN_MENU:
-                    await _mainMenuHelper.SendMainMenu(ClientData);
+                    await _clientHelper.SendMainMenu(ClientData);
                     await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.MainMenu);
                     return;
                 case Constants.UI.ButtonCommands.EDIT_TO_MAIN_MENU:
-                    await _mainMenuHelper.EditToMainMenu(ClientData);
+                    await _clientHelper.EditToMainMenu(ClientData);
                     await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.MainMenu);
                     return;
             }
 
-            var userStage = _userProvider.GetUserStage(ClientData.ChatId).Result;
-            var userStageEnum = (ChatStageEnum)Enum.Parse(typeof(ChatStageEnum), userStage?.Stage, true);
+            var userStage = await _userProvider.GetUserStage(ClientData.ChatId);
+
+            if (!Enum.TryParse(typeof(ChatStageEnum), userStage?.Stage, out var chatStageEnum))
+            {
+                //TODO
+                return;
+            }
+
+            var userStageEnum = (ChatStageEnum)chatStageEnum;
 
             switch (userStageEnum)
             {
@@ -148,9 +161,9 @@ namespace AstroTBotService.TBot
                     {
                         ClientData.Longitude = ClientData?.Message?.Location?.Longitude;
                         ClientData.Latitude = ClientData?.Message?.Location?.Latitude;
-                        
+
                         await _locationPicker.SendConfirmCoordinates(
-                            ClientData, 
+                            ClientData,
                             $"{Constants.UI.Icons.Common.EARTH} {_localeManager.GetString("YourLocation", ClientData.CultureInfo)}\n" +
                             $"{_localeManager.GetString("Longitude", ClientData.CultureInfo)}: {ClientData.Longitude.Value.ToString("F6")}\n" +
                             $"{_localeManager.GetString("Latitude", ClientData.CultureInfo)}: {ClientData.Latitude.Value.ToString("F6")}\n");
@@ -176,14 +189,24 @@ namespace AstroTBotService.TBot
 
             var userInfo = await _userProvider.GetUser(ClientData.ChatId);
 
+            var keyboard = new InlineKeyboardMarkup(new[]
+            {
+                new []
+                {
+                    _clientHelper.GetCancelButton(ClientData, _localeManager.GetString("ToMainMenu", ClientData.CultureInfo))
+                }
+            });
+
+            var utcNowDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, 0, 0, DateTimeKind.Utc);
+
             switch (ClientData.CallbackData)
             {
                 case Constants.UI.ButtonCommands.SEND_MAIN_MENU:
-                    await _mainMenuHelper.SendMainMenu(ClientData);
+                    await _clientHelper.SendMainMenu(ClientData);
                     await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.MainMenu);
                     return;
                 case Constants.UI.ButtonCommands.EDIT_TO_MAIN_MENU:
-                    await _mainMenuHelper.EditToMainMenu(ClientData);
+                    await _clientHelper.EditToMainMenu(ClientData);
                     await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.MainMenu);
                     return;
                 case Constants.UI.ButtonCommands.NATAL_CHART:
@@ -194,35 +217,32 @@ namespace AstroTBotService.TBot
                         return;
                     }
 
-                    var birthChart = await _calculationService.GetChartInfo(userInfo.BirthDate.Value, userInfo.GmtOffset.Value, userInfo.Longitude.Value, userInfo.Latitude.Value);
+                    var birthChart = await _calculationService.GetChartInfo(
+                        userInfo.BirthDate.Value, 
+                        userInfo.GmtOffset.Value, 
+                        userInfo.Longitude.Value, 
+                        userInfo.Latitude.Value,
+                        userInfo.HouseSystem);
 
-                    var messages0 = _mainMenuHelper.GetPlanetsInfoMessage(birthChart, ClientData);
-
-                    await _botClient.SendMessage(
-                            chatId: ClientData.ChatId,
-                            text: messages0,
-                            replyMarkup: null);
-
-                    var messages11 = _mainMenuHelper.GetHousesInfoMessage(birthChart, ClientData);
+                    var natalPlanetsMessage = _clientHelper.GetNatalPlanetsMessage(birthChart, ClientData);
 
                     await _botClient.SendMessage(
                             chatId: ClientData.ChatId,
-                            text: messages11,
+                            text: natalPlanetsMessage,
                             replyMarkup: null);
 
-                    var aspects1 = await _calculationService.GetNatalChartAspects(birthChart);
+                    var housesMessage = _clientHelper.GetHousesMessage(birthChart, ClientData);
 
-                    var messages1 = _mainMenuHelper.GetChartMessage(aspects1, ClientData, ChartTypeEnum.Natal);
+                    await _botClient.SendMessage(
+                            chatId: ClientData.ChatId,
+                            text: housesMessage,
+                            replyMarkup: null);
 
-                    var keyboard1 = new InlineKeyboardMarkup(new[]
-                    {
-                        new []
-                        {
-                            _mainMenuHelper.GetCancelButton(ClientData, _localeManager.GetString("ToMainMenu", ClientData.CultureInfo))
-                        }
-                    });
+                    var natalAspects = await _calculationService.GetNatalAspects(birthChart);
 
-                    await _mainMenuHelper.SendMessageHtml(ClientData.ChatId, messages1, keyboard1);
+                    var natalMessages = _clientHelper.GetChartMessages(natalAspects, ClientData, ChartTypeEnum.Natal);
+
+                    await _clientHelper.SendMessageHtml(ClientData.ChatId, natalMessages, keyboard);
 
                     return;
                 case Constants.UI.ButtonCommands.TRANSIT_FORECAST:
@@ -238,21 +258,20 @@ namespace AstroTBotService.TBot
                             text: $"{Constants.UI.Icons.Common.HOURGLASS} {_localeManager.GetString("ForecastProccessing", ClientData.CultureInfo)}",
                             replyMarkup: null);
 
-                    var utcNowDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, 0, 0, DateTimeKind.Utc);
+                    var transitInterval = new TimeSpan(1, 0, 0, 0);
 
-                    var aspects = await _calculationService.GetDayTransit(userInfo.BirthDate.Value, userInfo.GmtOffset.Value, utcNowDate, userInfo.Longitude.Value, userInfo.Latitude.Value);
+                    var aspects = await _calculationService.GetTransitAspects(
+                        userInfo.BirthDate.Value,
+                        userInfo.GmtOffset.Value,
+                        utcNowDate,
+                        transitInterval,
+                        userInfo.Longitude.Value,
+                        userInfo.Latitude.Value,
+                        userInfo.HouseSystem);
 
-                    var messages = _mainMenuHelper.GetChartMessage(aspects, ClientData, ChartTypeEnum.Transit);
+                    var transitMessages = _clientHelper.GetChartMessages(aspects, ClientData, ChartTypeEnum.Transit);
 
-                    var keyboard = new InlineKeyboardMarkup(new[]
-                    {
-                        new []
-                        {
-                            _mainMenuHelper.GetCancelButton(ClientData, _localeManager.GetString("ToMainMenu", ClientData.CultureInfo))
-                        }
-                    });
-
-                    await _mainMenuHelper.SendMessageHtml(ClientData.ChatId, messages, keyboard);
+                    await _clientHelper.SendMessageHtml(ClientData.ChatId, transitMessages, keyboard);
 
                     return;
                 case Constants.UI.ButtonCommands.DIRECTION_FORECAST:
@@ -263,22 +282,18 @@ namespace AstroTBotService.TBot
                         return;
                     }
 
-                    //TODO
-                    var utcNowDate2 = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, 0, 0, DateTimeKind.Utc);
+                    var directionAspects = await _calculationService.GetDirectionAspects(
+                        userInfo.BirthDate.Value,
+                        userInfo.GmtOffset.Value,
+                        utcNowDate,
+                        userInfo.Longitude.Value,
+                        userInfo.Latitude.Value, 
+                        userInfo.HouseSystem);
 
-                    var aspects2 = await _calculationService.GetDirection(userInfo.BirthDate.Value, userInfo.GmtOffset.Value, utcNowDate2, userInfo.Longitude.Value, userInfo.Latitude.Value);
+                    var directionMessages = _clientHelper.GetChartMessages(directionAspects, ClientData, ChartTypeEnum.Direction);
 
-                    var messages2 = _mainMenuHelper.GetChartMessage(aspects2, ClientData, ChartTypeEnum.Direction);
+                    await _clientHelper.SendMessageHtml(ClientData.ChatId, directionMessages, keyboard);
 
-                    var keyboard2 = new InlineKeyboardMarkup(new[]
-                    {
-                        new []
-                        {
-                            _mainMenuHelper.GetCancelButton(ClientData, _localeManager.GetString("ToMainMenu", ClientData.CultureInfo))
-                        }
-                    });
-
-                    await _mainMenuHelper.SendMessageHtml(ClientData.ChatId, messages2, keyboard2);
                     return;
                 case Constants.UI.ButtonCommands.POSITIVE_FORECAST:
 
@@ -290,14 +305,7 @@ namespace AstroTBotService.TBot
 
                     await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.BirthLocationPicker);
                     return;
-                case Constants.UI.ButtonCommands.CHANGE_LANGUAGE:
-                    await ChangeLanguage(MessageTypeEnum.Edit);
-                    return;
             }
-
-
-
-
 
             #region DatePicker
 
@@ -334,7 +342,7 @@ namespace AstroTBotService.TBot
                     {
                         await _userProvider.EditLocation(ClientData.ChatId, longitude, latitude);
 
-                        await _mainMenuHelper.EditToMainMenu(ClientData);
+                        await _clientHelper.EditToMainMenu(ClientData);
 
                         await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.MainMenu);
                     }
@@ -349,21 +357,31 @@ namespace AstroTBotService.TBot
                     }
                     else if (ClientData.CallbackData == Constants.UI.ButtonCommands.CHANGE_BIRTH_LOCATION)
                     {
-                        await _mainMenuHelper.SendMainMenu(ClientData);
+                        await _clientHelper.SendMainMenu(ClientData);
                         await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.MainMenu);
                     }
 
                     return;
 
                 case ChatStageEnum.LanguagePicker:
-                    if (Constants.UI.FlagsInfoDict.TryGetValue(ClientData.CallbackData, out (string Inon, string Descr) languageInfo))
+                    if (Constants.UI.FlagsInfoDict.TryGetValue(ClientData.CallbackData, out (string Icon, string Descr) languageInfo))
                     {
                         ClientData.CultureInfo = new CultureInfo(ClientData.CallbackData);
 
                         await _userProvider.EditLanguage(ClientData.AstroUser.Id.Value, ClientData.CallbackData);
                     }
 
-                    await _mainMenuHelper.EditToMainMenu(ClientData);
+                    await _clientHelper.EditToMainMenu(ClientData);
+                    await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.MainMenu);
+                    return;
+
+                case ChatStageEnum.HouseSystemPicker:
+                    if (Enum.TryParse<HouseSystemEnum>(ClientData.CallbackData, out var houseSystem))
+                    {
+                        await _userProvider.EditHouseSystem(ClientData.AstroUser.Id.Value, houseSystem);
+                    }
+
+                    await _clientHelper.EditToMainMenu(ClientData);
                     await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.MainMenu);
                     return;
 
@@ -446,7 +464,7 @@ namespace AstroTBotService.TBot
                     {
                         await _userProvider.EditBirthday(ClientData.ChatId, ClientData.DatePickerData.DateTime, ClientData.DatePickerData.GmtOffset);
 
-                        await _mainMenuHelper.EditToMainMenu(ClientData);
+                        await _clientHelper.EditToMainMenu(ClientData);
 
                         await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.MainMenu);
                     }
@@ -460,7 +478,7 @@ namespace AstroTBotService.TBot
                     }
                     else if (ClientData.DatePickerData?.IsCancelCommand ?? false)
                     {
-                        await _mainMenuHelper.SendMainMenu(ClientData);
+                        await _clientHelper.SendMainMenu(ClientData);
                         await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.MainMenu);
                     }
 
@@ -482,11 +500,14 @@ namespace AstroTBotService.TBot
 
             if (!chatId.HasValue)
             {
-                //TODO
-                var a = new AstroUser();
-                var b = CultureInfo.CurrentCulture;
+                var newAstroUser = new AstroUser()
+                {
+                    HouseSystem = HouseSystemEnum.Placidus
+                };
 
-                return new(a, b);
+                var currentCulture = CultureInfo.CurrentCulture;
+
+                return new(newAstroUser, currentCulture);
             }
 
             var astroUser = await _userProvider.GetUser(chatId.Value);
@@ -499,7 +520,8 @@ namespace AstroTBotService.TBot
                     Id = chatId,
                     BirthDate = null,
                     GmtOffset = null,
-                    Language = cultureInfo.Name
+                    Language = cultureInfo.Name,
+                    HouseSystem = HouseSystemEnum.Placidus
                 };
 
                 await _userProvider.AddUser(astroUser);
@@ -527,18 +549,16 @@ namespace AstroTBotService.TBot
             return new CultureInfo("en-US");
         }
 
-        private async Task ChangeLanguage(MessageTypeEnum messageType)
+        private async Task SetLanguage()
         {
-            if (messageType == MessageTypeEnum.New)
-            {
-                await _mainMenuHelper.SendLanguagePicker(ClientData);
-            }
-            else if (messageType == MessageTypeEnum.Edit)
-            {
-                await _mainMenuHelper.EditToLanguagePicker(ClientData);
-            }
-
+            await _clientHelper.SendLanguagePicker(ClientData);
             await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.LanguagePicker);
+        }
+
+        private async Task SetHouseSystem()
+        {
+            await _clientHelper.SendHouseSystemPicker(ClientData);
+            await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.HouseSystemPicker);
         }
 
         private async Task SetBirthday()
@@ -557,20 +577,6 @@ namespace AstroTBotService.TBot
                 $"{Constants.UI.Icons.Common.EARTH}{_localeManager.GetString("ChooseBirthLocation", ClientData.CultureInfo)}");
 
             await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.BirthLocationPicker);
-        }
-
-        private async Task MainMenu(MessageTypeEnum messageType)
-        {
-            if (messageType == MessageTypeEnum.New)
-            {
-                await _mainMenuHelper.SendMainMenu(ClientData);
-            }
-            else if (messageType == MessageTypeEnum.Edit)
-            {
-                await _mainMenuHelper.EditToMainMenu(ClientData);
-            }
-
-            await _userProvider.SetUserStage(ClientData.ChatId, ChatStageEnum.MainMenu);
         }
     }
 }

@@ -5541,4 +5541,19 @@
   <data name="DirectionAspectsInfo" xml:space="preserve">
     <value>Дирекционный прогноз на сегодня</value>
   </data>
+  <data name="ChooseHousesSystem" xml:space="preserve">
+    <value>Выберите систему домов</value>
+  </data>
+  <data name="Koch" xml:space="preserve">
+    <value>Кох</value>
+  </data>
+  <data name="Placidus" xml:space="preserve">
+    <value>Плацидус</value>
+  </data>
+  <data name="Porphyry" xml:space="preserve">
+    <value>Порфирий</value>
+  </data>
+  <data name="YourHousesSystem" xml:space="preserve">
+    <value>Система домов</value>
+  </data>
 </root>
