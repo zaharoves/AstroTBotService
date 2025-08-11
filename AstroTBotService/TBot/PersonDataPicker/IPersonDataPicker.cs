@@ -4,11 +4,10 @@ using Telegram.Bot.Types;
 
 namespace AstroTBotService.TBot
 {
-    public interface IDatePicker
+    public interface IPersonDataPicker
     {
-        bool TryParseDateTimePicker(TBotClientData clientData, out DatePickerData datePickerData);
-
         Task SendYearIntervalPicker(TBotClientData clientData, string text);
+        Task EditToYearIntervalPicker(TBotClientData clientData, string text);
 
         Task SendYearPicker(TBotClientData clientData, string text);
 

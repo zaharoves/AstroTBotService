@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AstroTBotService.Migrations
 {
     /// <inheritdoc />
-    public partial class InitCreate : Migration
+    public partial class InitMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -22,11 +22,18 @@ namespace AstroTBotService.Migrations
                     Language = table.Column<string>(type: "text", nullable: true),
                     HouseSystem = table.Column<int>(type: "integer", nullable: false),
                     Longitude = table.Column<double>(type: "double precision", nullable: true),
-                    Latitude = table.Column<double>(type: "double precision", nullable: true)
+                    Latitude = table.Column<double>(type: "double precision", nullable: true),
+                    ParentUserId = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AstroUsers", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AstroUsers_AstroUsers_ParentUserId",
+                        column: x => x.ParentUserId,
+                        principalTable: "AstroUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -64,6 +71,11 @@ namespace AstroTBotService.Migrations
                 {
                     table.PrimaryKey("PK_UsersStages", x => x.Id);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AstroUsers_ParentUserId",
+                table: "AstroUsers",
+                column: "ParentUserId");
         }
 
         /// <inheritdoc />

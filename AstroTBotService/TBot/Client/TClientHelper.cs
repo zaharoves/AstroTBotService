@@ -1,11 +1,11 @@
 ﻿using AstroTBotService.AstroCalculation.Entities;
+using AstroTBotService.Db.Entities;
 using AstroTBotService.Entities;
 using AstroTBotService.Enums;
 using System.Globalization;
 using System.Text;
 using Telegram.Bot;
 using Telegram.Bot.Types.ReplyMarkups;
-using static AstroTBotService.Constants.UI;
 
 namespace AstroTBotService.TBot
 {
@@ -39,16 +39,30 @@ namespace AstroTBotService.TBot
                     text: message,
                     replyMarkup: replyMarkup);
             }
-            catch (Telegram.Bot.Exceptions.ApiRequestException ex)
+            catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка Telegram API при отправке сообщения в чат {chatId}: {ex.Message}");
-                Console.WriteLine($"Код ошибки: {ex.ErrorCode}");
-                Console.WriteLine($"Описание ошибки: {ex.Parameters}");
+                _logger.LogError(ex, $"Sending message error. Chat Id: {chatId}.");
+            }
+        }
+
+        public async Task EditMessage(long chatId, int messageId, string messageText, InlineKeyboardMarkup replyMarkup)
+        {
+            try
+            {
+                if (messageText.Length > 4096)
+                {
+                    messageText = messageText.Substring(0, 4096);
+                }
+
+                await _botClient.EditMessageText(
+                    chatId: chatId,
+                    messageId: messageId,
+                    text: messageText,
+                    replyMarkup: replyMarkup);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Произошла непредвиденная ошибка при отправке сообщения в чат {chatId}: {ex.Message}");
-                Console.WriteLine($"Стек вызова: {ex.StackTrace}");
+                _logger.LogError(ex, $"Editing message error. Chat Id: {chatId}.");
             }
         }
 
@@ -60,13 +74,13 @@ namespace AstroTBotService.TBot
 
                 for (var i = 0; i < messages.Count(); i++)
                 {
-                    if (messages[i].Length > Constants.MAX_T_MESSAGE_LENGTH)
+                    if (messages[i].Length > Constants.UI.MAX_T_MESSAGE_LENGTH)
                     {
-                        Console.WriteLine($"Слишком длинное сообщение. Не будет отправлено!");
+                        _logger.LogError($"Too long message for sending. Length {messages[i].Length}. Chat Id: {chatId}.");
                         continue;
                     }
 
-                    if (sendMessage.Length + messages[i].Length <= Constants.MAX_T_MESSAGE_LENGTH)
+                    if (sendMessage.Length + messages[i].Length <= Constants.UI.MAX_T_MESSAGE_LENGTH)
                     {
                         sendMessage += messages[i];
                         continue;
@@ -82,48 +96,35 @@ namespace AstroTBotService.TBot
 
                 if (!string.IsNullOrEmpty(sendMessage))
                 {
-                    //TODO !!!
-                    //var keyboard = new InlineKeyboardMarkup(new[]
-                    //{
-                    //    //new [] { GetCancelButton() }
-                    //});
-
                     await _botClient.SendMessage(
-                    chatId: chatId,
-                    text: sendMessage,
-                    replyMarkup: replyMarkup,
-                    parseMode: Telegram.Bot.Types.Enums.ParseMode.Html);
+                        chatId: chatId,
+                        text: sendMessage,
+                        replyMarkup: replyMarkup,
+                        parseMode: Telegram.Bot.Types.Enums.ParseMode.Html);
                 }
-            }
-            catch (Telegram.Bot.Exceptions.ApiRequestException ex)
-            {
-                Console.WriteLine($"Ошибка Telegram API при отправке сообщения в чат {chatId}: {ex.Message}");
-                Console.WriteLine($"Код ошибки: {ex.ErrorCode}");
-                Console.WriteLine($"Описание ошибки: {ex.Parameters}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Произошла непредвиденная ошибка при отправке сообщения в чат {chatId}: {ex.Message}");
-                Console.WriteLine($"Стек вызова: {ex.StackTrace}");
+                _logger.LogError(ex, $"Sending HTML message error. Chat Id: {chatId}.");
             }
         }
 
-        public async Task SendMainMenu(TBotClientData clientData)
+        public async Task SendMenu(TBotClientData clientData)
         {
-            var menuInfo = GetMainMenuKeyboard(clientData);
+            var menuInfo = GetMenuKeyboard(clientData);
 
             await _botClient.SendMessage(
-                chatId: clientData.AstroUser.Id,
+                chatId: clientData.AstroUserId,
                 text: menuInfo.Message,
                 replyMarkup: menuInfo.Keyboard);
         }
 
-        public async Task EditToMainMenu(TBotClientData clientData)
+        public async Task EditToMenu(TBotClientData clientData)
         {
-            var menuInfo = GetMainMenuKeyboard(clientData);
+            var menuInfo = GetMenuKeyboard(clientData);
 
             await _botClient.EditMessageText(
-                chatId: clientData.AstroUser.Id,
+                chatId: clientData.AstroUserId,
                 messageId: clientData.Message.Id,
                 text: menuInfo.Message,
                 replyMarkup: menuInfo.Keyboard);
@@ -134,7 +135,7 @@ namespace AstroTBotService.TBot
             var menuInfo = GetChooseLanguageKeyboard(clientData);
 
             await _botClient.SendMessage(
-                chatId: clientData.AstroUser.Id,
+                chatId: clientData.AstroUserId,
                 text: menuInfo.Message,
                 replyMarkup: menuInfo.Keyboard);
         }
@@ -144,70 +145,118 @@ namespace AstroTBotService.TBot
             var menuInfo = GetHousePickerKeyboard(clientData);
 
             await _botClient.SendMessage(
-                chatId: clientData.AstroUser.Id,
+                chatId: clientData.AstroUserId,
                 text: menuInfo.Message,
                 replyMarkup: menuInfo.Keyboard);
         }
 
+        public async Task SendPersons(TBotClientData clientData, string commandButtonPrefix)
+        {
+            var menuInfo = GetPersonsKeyboard(clientData, commandButtonPrefix);
+
+            await _botClient.EditMessageText(
+                chatId: clientData.AstroUserId,
+                messageId: clientData.Message.Id,
+                text: menuInfo.Message,
+                replyMarkup: menuInfo.Keyboard);
+        }
+
+        public async Task SendEditPersons(TBotClientData clientData)
+        {
+            var message = _localeManager.GetString("ChooseEditPerson", clientData.AstroUser.CultureInfo);
+            var buttons = GetCancelButtonWithEdit(clientData);
+
+            await _botClient.EditMessageText(
+                chatId: clientData.AstroUserId,
+                messageId: clientData.Message.Id,
+                text: $"{message}:",
+                replyMarkup: buttons);
+        }
+
+        public InlineKeyboardButton GetBackToPersonsButton(TBotClientData clientData)
+        {
+            var buttonText = _localeManager.GetString("Back", clientData.AstroUser.CultureInfo);
+
+            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.UI.Icons.Common.BACK}", $"{Constants.UI.Buttons.Commands.GET_PERSONS}");
+        }
 
         public InlineKeyboardButton GetCancelButton(TBotClientData clientData)
         {
-            var buttonText = _localeManager.GetString("Cancel", clientData.CultureInfo);
+            var buttonText = _localeManager.GetString("Cancel", clientData.AstroUser.CultureInfo);
 
-            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.UI.Icons.Common.ORANGE_CIRCLE}", $"{Constants.UI.ButtonCommands.SEND_MAIN_MENU}");
+            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.UI.Icons.Common.ORANGE_CIRCLE}", $"{Constants.UI.Buttons.Commands.SEND_MENU}");
         }
 
         public InlineKeyboardButton GetCancelButtonWithEdit(TBotClientData clientData)
         {
-            var buttonText = _localeManager.GetString("Cancel", clientData.CultureInfo);
+            var buttonText = _localeManager.GetString("Cancel", clientData.AstroUser.CultureInfo);
 
-            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.UI.Icons.Common.ORANGE_CIRCLE}", $"{Constants.UI.ButtonCommands.EDIT_TO_MAIN_MENU}");
+            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.UI.Icons.Common.ORANGE_CIRCLE}", $"{Constants.UI.Buttons.Commands.EDIT_TO_MENU}");
         }
 
         public InlineKeyboardButton GetCancelButton(TBotClientData clientData, string buttonText)
         {
-            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.UI.Icons.Common.ORANGE_CIRCLE}", $"{Constants.UI.ButtonCommands.SEND_MAIN_MENU}");
+            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.UI.Icons.Common.ORANGE_CIRCLE}", $"{Constants.UI.Buttons.Commands.SEND_MENU}");
         }
 
         public InlineKeyboardButton GetCancelButtonWithEdit(TBotClientData clientData, string buttonText)
         {
-            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.UI.Icons.Common.ORANGE_CIRCLE}", $"{Constants.UI.ButtonCommands.EDIT_TO_MAIN_MENU}");
+            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.UI.Icons.Common.ORANGE_CIRCLE}", $"{Constants.UI.Buttons.Commands.EDIT_TO_MENU}");
         }
 
-        private (string Message, InlineKeyboardMarkup Keyboard) GetMainMenuKeyboard(TBotClientData clientData)
+        private (string Message, InlineKeyboardMarkup Keyboard) GetMenuKeyboard(TBotClientData clientData)
         {
             var message = string.Empty;
             var keyboard = new InlineKeyboardMarkup();
+            var cultureInfo = clientData.AstroUser.CultureInfo;
 
             Constants.UI.FlagsInfoDict.TryGetValue(clientData.AstroUser.Language, out (string Icon, string Description) flagData);
 
-            if (clientData.AstroUser.BirthDate != null)
+            var person = clientData.AstroUser.GetChosenPerson();
+
+            if (person.BirthDate == null)
             {
-                message = $"{Constants.UI.Icons.Common.SUN} {_localeManager.GetString("YourBirthDate", clientData.CultureInfo)}\n" +
-                    $"{clientData.AstroUser.DateToString(clientData.CultureInfo)}";
+                message = $"{Constants.UI.Icons.Common.SCIENCE} {_localeManager.GetString("FillYourBirthDate", cultureInfo)}.";
 
-                if (clientData.AstroUser.Longitude != null && clientData.AstroUser.Latitude != null)
-                {
-                    message += $"\n\n{Constants.UI.Icons.Common.EARTH} {_localeManager.GetString("YourLocation", clientData.CultureInfo)}\n" +
-                        $"{_localeManager.GetString("Longitude", clientData.CultureInfo)}: {clientData.AstroUser.Longitude.Value.ToString("F6")}\n" +
-                        $"{_localeManager.GetString("Latitude", clientData.CultureInfo)}: {clientData.AstroUser.Latitude.Value.ToString("F6")}";
-
-                    if (clientData.AstroUser.HouseSystem != null)
-                    {
-                        message += $"\n\n{Constants.UI.Icons.Common.HOUSE} {_localeManager.GetString("YourHousesSystem", clientData.CultureInfo)}\n" +
-                            $"{_localeManager.GetString(clientData.AstroUser.HouseSystem.ToString(), clientData.CultureInfo)}";
-                    }
-                }
-
-                message += $"\n\n{_localeManager.GetString("YouCanCalculate", clientData.CultureInfo)}.";
-
-                message += $"\n{_localeManager.GetString("YouCanChangeConfig", clientData.CultureInfo)}.";
-
-                var setLocationButton = new[]
+                var setBirthDateButton = new[]
                 {
                     InlineKeyboardButton.WithCallbackData(
-                        $"{Constants.UI.Icons.Common.EARTH} {_localeManager.GetString("SetBirthLocation", clientData.CultureInfo)}",
-                        Constants.UI.ButtonCommands.SET_BIRTH_LOCATION),
+                        _localeManager.GetString("SetBirthDate", cultureInfo),
+                        Constants.UI.Buttons.Commands.ADD_USER)
+                };
+
+                keyboard = GetKeyboard(setBirthDateButton);
+            }
+            else
+            {
+                var birthdayMessage = person.IsUser == true
+                    ? $"{_localeManager.GetString("YourBirthDate", cultureInfo)}:"
+                    : $"{person.Name}\n{_localeManager.GetString("BirthDate", cultureInfo)}:";
+
+                message = $"{Constants.UI.Icons.Common.SUN} {birthdayMessage}\n" +
+                    $"{person.DateToLongString(cultureInfo)}";
+
+                if (person.Longitude != null && person.Latitude != null)
+                {
+                    message += $"\n\n{Constants.UI.Icons.Common.EARTH} {_localeManager.GetString("Location", cultureInfo)}:\n" +
+                        $"{_localeManager.GetString("Longitude", cultureInfo)}: {person.Longitude.Value.ToString("F6")}\n" +
+                        $"{_localeManager.GetString("Latitude", cultureInfo)}: {person.Latitude.Value.ToString("F6")}";
+
+                    message += $"\n\n{Constants.UI.Icons.Common.HOUSE} {_localeManager.GetString("HousesSystem", cultureInfo)}:\n" +
+                        $"{_localeManager.GetString(clientData.AstroUser.HouseSystem.ToString(), cultureInfo)}";
+
+                }
+
+                message += $"\n\n{_localeManager.GetString("YouCanCalculate", cultureInfo)}.";
+
+                message += $"\n{_localeManager.GetString("YouCanChangeConfig", cultureInfo)}.";
+
+                var personsButton = new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        $"{Constants.UI.Icons.Common.FACE_MAN_1} {Constants.UI.Icons.Common.FACE_WOMAN_1} " +
+                        $"{_localeManager.GetString("Database", cultureInfo)}",
+                        Constants.UI.Buttons.Commands.GET_PERSONS)
                 };
 
                 var natalIcon = string.Empty;
@@ -219,8 +268,8 @@ namespace AstroTBotService.TBot
                 var natalCharButton = new[]
                 {
                     InlineKeyboardButton.WithCallbackData(
-                    $"{natalIcon} {_localeManager.GetString("NatalChartButton", clientData.CultureInfo)}",
-                    Constants.UI.ButtonCommands.NATAL_CHART)
+                    $"{natalIcon} {_localeManager.GetString("NatalChartButton", cultureInfo)}",
+                    Constants.UI.Buttons.Commands.NATAL_CHART)
                 };
 
                 var transitIcon = string.Empty;
@@ -232,8 +281,8 @@ namespace AstroTBotService.TBot
                 var transitForecastButton = new[]
                 {
                     InlineKeyboardButton.WithCallbackData(
-                    $"{transitIcon} {_localeManager.GetString("TransitForecastButton", clientData.CultureInfo)}",
-                    Constants.UI.ButtonCommands.TRANSIT_FORECAST),
+                    $"{transitIcon} {_localeManager.GetString("TransitForecastButton", cultureInfo)}",
+                    Constants.UI.Buttons.Commands.TRANSIT_DAILY_FORECAST),
                 };
 
                 var directionIcon = string.Empty;
@@ -245,40 +294,15 @@ namespace AstroTBotService.TBot
                 var directionForecastButton = new[]
                 {
                     InlineKeyboardButton.WithCallbackData(
-                    $"{directionIcon} {_localeManager.GetString("DirectionForecastButton", clientData.CultureInfo)}",
-                    Constants.UI.ButtonCommands.DIRECTION_FORECAST),
+                    $"{directionIcon} {_localeManager.GetString("DirectionForecastButton", cultureInfo)}",
+                    Constants.UI.Buttons.Commands.DIRECTION_FORECAST),
                 };
 
-                if (clientData.AstroUser.Longitude == null || clientData.AstroUser.Latitude == null)
-                {
-                    keyboard = GetKeyboard(
-                        setLocationButton,
-                        natalCharButton,
-                        transitForecastButton,
-                        directionForecastButton);
-                }
-                else
-                {
-                    keyboard = GetKeyboard(
-                        natalCharButton,
-                        transitForecastButton,
-                        directionForecastButton);
-                }
-
-                //TODO new [] { InlineKeyboardButton.WithCallbackData($"Рассчитать благоприятные дни", Constants.ButtonCommands.POSITIVE_FORECAST) }
-            }
-            else
-            {
-                message = $"{Constants.UI.Icons.Common.SCIENCE} {_localeManager.GetString("FillYourBirthDate", clientData.CultureInfo)}.";
-
-                var setBirthDateButton = new[]
-                {
-                    InlineKeyboardButton.WithCallbackData(
-                    _localeManager.GetString("SetBirthDate", clientData.CultureInfo),
-                    Constants.UI.ButtonCommands.SET_BIRTHDATE)
-                };
-
-                keyboard = GetKeyboard(setBirthDateButton);
+                keyboard = GetKeyboard(
+                    personsButton,
+                    natalCharButton,
+                    transitForecastButton,
+                    directionForecastButton);
             }
 
             return (message, keyboard);
@@ -291,7 +315,7 @@ namespace AstroTBotService.TBot
 
         private (string Message, InlineKeyboardMarkup Keyboard) GetChooseLanguageKeyboard(TBotClientData clientData)
         {
-            var message = $"{_localeManager.GetString("ChooseLanguage", clientData.CultureInfo)}:";
+            var message = $"{_localeManager.GetString("ChooseLanguage", clientData.AstroUser.CultureInfo)}:";
 
             var buttons = new List<InlineKeyboardButton[]>();
 
@@ -313,19 +337,101 @@ namespace AstroTBotService.TBot
             return (message, new InlineKeyboardMarkup(buttons));
         }
 
-        private (string Message, InlineKeyboardMarkup Keyboard) GetHousePickerKeyboard(TBotClientData clientData)
+        private (string Message, InlineKeyboardMarkup Keyboard) GetPersonsKeyboard(TBotClientData clientData, string commandButtonPrefix)
         {
-            var message = $"{_localeManager.GetString("ChooseHousesSystem", clientData.CultureInfo)}:";
+            var icon = clientData.AstroUser.IsChosen == true && commandButtonPrefix == Constants.UI.Buttons.CommandTypes.GET
+                ? $"{Constants.UI.Icons.Common.CHOOSED} "
+                : string.Empty;
 
             var buttons = new List<InlineKeyboardButton[]>();
 
-            foreach (var houseSystem in Enum.GetValues(typeof(HouseSystemEnum)).Cast<HouseSystemEnum>())
+            if (commandButtonPrefix != Constants.UI.Buttons.CommandTypes.DELETE)
             {
                 buttons.Add(
                 [
                     InlineKeyboardButton.WithCallbackData(
-                        $"{_localeManager.GetString(houseSystem.ToString(), clientData.CultureInfo)}",
-                        houseSystem.ToString())
+                    $"{icon}{_localeManager.GetString("You", clientData.AstroUser.CultureInfo)}" +
+                    $"{Constants.UI.Icons.Common.MINUS}" +
+                    $"{clientData.AstroUser.DateToShortString(clientData.AstroUser.CultureInfo)}",
+                    $"{Constants.UI.Buttons.PersonTypes.USER}" +
+                    $"{Constants.UI.Buttons.SEPARATOR}" +
+                    $"{commandButtonPrefix}" +
+                    $"{Constants.UI.Buttons.SEPARATOR}" +
+                    $"{clientData.AstroUserId}")
+                ]);
+            }
+
+            if ((clientData?.AstroUser?.ChildPersons?.Count() ?? 0) != 0)
+            {
+                foreach (var person in clientData.AstroUser.ChildPersons.OrderBy(p => p.Name))
+                {
+                    icon = person.IsChosen == true && commandButtonPrefix == Constants.UI.Buttons.CommandTypes.GET
+                        ? $"{Constants.UI.Icons.Common.CHOOSED} "
+                        : string.Empty;
+
+                    buttons.Add(
+                    [
+                        InlineKeyboardButton.WithCallbackData(
+                        $"{icon}{person?.Name}" +
+                        $"{Constants.UI.Icons.Common.MINUS}" +
+                        $"{person.DateToShortString(clientData.AstroUser.CultureInfo)}",
+                        $"{Constants.UI.Buttons.PersonTypes.PERSON}" +
+                        $"{Constants.UI.Buttons.SEPARATOR}" +
+                        $"{commandButtonPrefix}" +
+                        $"{Constants.UI.Buttons.SEPARATOR}" +
+                        $"{person.Id}")
+                    ]);
+                }
+            }
+
+            var message = string.Empty;
+
+            switch (commandButtonPrefix)
+            {
+                case Constants.UI.Buttons.CommandTypes.GET:
+                    message = $"{_localeManager.GetString("ChoosePersonMessage", clientData.AstroUser.CultureInfo)}:";
+                    buttons.Add(new[] { GetAddPersonButton(clientData), GetEditPersonButton(clientData) });
+                    buttons.Add(new[] { GetDeletePersonButton(clientData), GetCancelButtonWithEdit(clientData) });
+                    break;
+                case Constants.UI.Buttons.CommandTypes.EDIT:
+
+                    message = $"{Constants.UI.Icons.Common.EDIT} {_localeManager.GetString("ChooseEditPersonMessage", clientData.AstroUser.CultureInfo)}:";
+                    buttons.Add(new[] { GetBackToPersonsButton(clientData), GetCancelButtonWithEdit(clientData) });
+                    break;
+                case Constants.UI.Buttons.CommandTypes.DELETE:
+                    message = $"{Constants.UI.Icons.Common.X_RED} {_localeManager.GetString("ChooseDeletePersonMessage", clientData.AstroUser.CultureInfo)}:";
+                    buttons.Add(new[] { GetBackToPersonsButton(clientData), GetCancelButtonWithEdit(clientData) });
+                    break;
+            }
+
+            return (message, new InlineKeyboardMarkup(buttons));
+        }
+
+        private (string Message, InlineKeyboardMarkup Keyboard) GetHousePickerKeyboard(TBotClientData clientData)
+        {
+            var message = $"{_localeManager.GetString("ChooseHousesSystem", clientData.AstroUser.CultureInfo)}:";
+
+            var buttons = new List<InlineKeyboardButton[]>();
+
+            foreach (var houseSystem in Enum.GetValues(typeof(HouseSystemEnum)).Cast<HouseSystemEnum>().Order())
+            {
+                if (houseSystem == clientData.AstroUser.HouseSystem)
+                {
+                    buttons.Add(
+                    [
+                        InlineKeyboardButton.WithCallbackData(
+                            $"{Constants.UI.Icons.Common.CHOOSED} {_localeManager.GetString(houseSystem.ToString(), clientData.AstroUser.CultureInfo)}",
+                            ((int)houseSystem).ToString())
+                    ]);
+
+                    continue;
+                }
+
+                buttons.Add(
+                [
+                    InlineKeyboardButton.WithCallbackData(
+                        $"{_localeManager.GetString(houseSystem.ToString(), clientData.AstroUser.CultureInfo)}",
+                        ((int)houseSystem).ToString())
                 ]);
             }
 
@@ -337,26 +443,51 @@ namespace AstroTBotService.TBot
             return (message, new InlineKeyboardMarkup(buttons));
         }
 
+        public InlineKeyboardButton GetAddPersonButton(TBotClientData clientData)
+        {
+            var buttonText = _localeManager.GetString("Add", clientData.AstroUser.CultureInfo);
+
+            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.UI.Icons.Common.GREEN_CIRCLE}", $"{Constants.UI.Buttons.Commands.ADD_PERSON}");
+        }
+
+        public InlineKeyboardButton GetEditPersonButton(TBotClientData clientData)
+        {
+            var buttonText = _localeManager.GetString("Change", clientData.AstroUser.CultureInfo);
+
+            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.UI.Icons.Common.YELLOW_CIRCLE}", $"{Constants.UI.Buttons.Commands.EDIT_PERSON}");
+        }
+
+        public InlineKeyboardButton GetDeletePersonButton(TBotClientData clientData)
+        {
+            var buttonText = _localeManager.GetString("Delete", clientData.AstroUser.CultureInfo);
+
+            return InlineKeyboardButton.WithCallbackData($"{buttonText} {Constants.UI.Icons.Common.RED_CIRCLE}", $"{Constants.UI.Buttons.Commands.DELETE_PERSON}");
+        }
 
         public List<string> GetChartMessages(
             List<AspectInfo> aspects,
-            TBotClientData clientData,
+            IAstroPerson astroPerson,
+            CultureInfo cultureInfo,
             ChartTypeEnum chartTypeEnum)
         {
             var messages = new List<string>();
 
             var icon = string.Empty;
 
-            if (ChartTypeIconDict.TryGetValue(chartTypeEnum, out var _icon))
+            if (Constants.UI.ChartTypeIconDict.TryGetValue(chartTypeEnum, out var _icon))
             {
                 icon = _icon;
             }
 
             var chartType = chartTypeEnum.ToString() + "AspectsInfo";
 
-            messages.Add($"{icon} " +
-                $"{_localeManager.GetString(chartType, clientData.CultureInfo)}: \n" +
-                $"{clientData.AstroUser.DateToString(clientData.CultureInfo)}\n\n");
+            var name = astroPerson.IsUser == true
+                ? _localeManager.GetString("You", cultureInfo)
+                : astroPerson.Name;
+
+            messages.Add($"{icon} {name}\n" +
+                $"{astroPerson.DateToLongString(cultureInfo)}\n" +
+                $"{_localeManager.GetString(chartType, cultureInfo)}:\n\n");
 
             foreach (var aspect in aspects)
             {
@@ -378,22 +509,22 @@ namespace AstroTBotService.TBot
                     ? $"0{aspect.NatalPlanet.ZodiacMinutes}"
                     : aspect.NatalPlanet.ZodiacMinutes.ToString();
 
-                var transitPlanetIcon = PlanetIconDict[aspect.TransitPlanet.Planet];
-                var transitZodiacIcon = ZodiacIconDict[aspect.TransitPlanet.Zodiac];
+                var transitPlanetIcon = Constants.UI.PlanetIconDict[aspect.TransitPlanet.Planet];
+                var transitZodiacIcon = Constants.UI.ZodiacIconDict[aspect.TransitPlanet.Zodiac];
 
-                var natalPlanetIcon = PlanetIconDict[aspect.NatalPlanet.Planet];
-                var natalZodiacIcon = ZodiacIconDict[aspect.NatalPlanet.Zodiac];
+                var natalPlanetIcon = Constants.UI.PlanetIconDict[aspect.NatalPlanet.Planet];
+                var natalZodiacIcon = Constants.UI.ZodiacIconDict[aspect.NatalPlanet.Zodiac];
 
-                var aspectIcon = AspectIconDict[aspect.Aspect];
+                var aspectIcon = Constants.UI.AspectIconDict[aspect.Aspect];
 
-                var transitRetroIcon = aspect.TransitPlanet.IsRetro ? Icons.Common.RETRO : string.Empty;
-                var natalRetroIcon = aspect.NatalPlanet.IsRetro ? Icons.Common.RETRO : string.Empty;
+                var transitRetroIcon = aspect.TransitPlanet.IsRetro ? Constants.UI.Icons.Common.RETRO : string.Empty;
+                var natalRetroIcon = aspect.NatalPlanet.IsRetro ? Constants.UI.Icons.Common.RETRO : string.Empty;
 
                 var transitRetroStr = aspect.TransitPlanet.IsRetro ? "(R)" : string.Empty;
                 var natalRetroStr = aspect.NatalPlanet.IsRetro ? "(R)" : string.Empty;
 
                 var transitStr = $"{transitPlanetIcon}{transitRetroIcon}  {transitZodiacIcon}" +
-                    $"[{transitAnglesStr}{Icons.Common.ANGLES}{transitMinutesStr}{Icons.Common.MINUTES}]";
+                    $"[{transitAnglesStr}{Constants.UI.Icons.Common.ANGLES}{transitMinutesStr}{Constants.UI.Icons.Common.MINUTES}]";
 
                 if (chartTypeEnum == ChartTypeEnum.Natal)
                 {
@@ -401,19 +532,19 @@ namespace AstroTBotService.TBot
                 }
 
                 var natalStr = $"{natalPlanetIcon}{natalRetroIcon}  {natalZodiacIcon}" +
-                    $"[{natalAnglesStr}{Icons.Common.ANGLES}{natalMinutesStr}{Icons.Common.MINUTES}]";
+                    $"[{natalAnglesStr}{Constants.UI.Icons.Common.ANGLES}{natalMinutesStr}{Constants.UI.Icons.Common.MINUTES}]";
 
                 if (chartTypeEnum == ChartTypeEnum.Natal)
                 {
                     natalStr += $" ( {aspect.NatalPlanet.StandHouse} )";
                 }
 
-                sb.Append($"{_localeManager.GetString(aspect.TransitPlanet.Planet.ToString(), clientData.CultureInfo)}" +
+                sb.Append($"{_localeManager.GetString(aspect.TransitPlanet.Planet.ToString(), cultureInfo)}" +
                     $"{transitRetroStr} " +
-                    $"{Icons.Common.MINUS} " +
-                    $"{_localeManager.GetString(aspect.Aspect.ToString(), clientData.CultureInfo)} " +
-                    $"{Icons.Common.MINUS} " +
-                    $"{_localeManager.GetString(aspect.NatalPlanet.Planet.ToString(), clientData.CultureInfo)}" +
+                    $"{Constants.UI.Icons.Common.MINUS} " +
+                    $"{_localeManager.GetString(aspect.Aspect.ToString(), cultureInfo)} " +
+                    $"{Constants.UI.Icons.Common.MINUS} " +
+                    $"{_localeManager.GetString(aspect.NatalPlanet.Planet.ToString(), cultureInfo)}" +
                     $"{natalRetroStr}");
 
                 if (chartTypeEnum == ChartTypeEnum.Transit &&
@@ -426,7 +557,7 @@ namespace AstroTBotService.TBot
 
                 sb.Append("\n");
 
-                var description = GetAspectDescription(aspect, clientData.CultureInfo, chartTypeEnum);
+                var description = GetAspectDescription(aspect, cultureInfo, chartTypeEnum);
 
                 var expandableDescription = $@"<blockquote expandable>{description}</blockquote> ";
 
@@ -439,13 +570,17 @@ namespace AstroTBotService.TBot
             return messages;
         }
 
-        public string GetNatalPlanetsMessage(ChartInfo chartInfo, TBotClientData clientData)
+        public string GetNatalPlanetsMessage(ChartInfo chartInfo, IAstroPerson astroPerson, CultureInfo cultureInfo)
         {
-            var sb = new StringBuilder();
+            var sBuilder = new StringBuilder();
 
-            sb.Append($"{Icons.Common.WHITE_CIRCLE} " +
-                $"{_localeManager.GetString("NatalPlanetsInfo", clientData.CultureInfo)}:\n" +
-                $"{clientData.AstroUser.DateToString(clientData.CultureInfo)}\n\n");
+            var name = astroPerson.IsUser == true
+                ? _localeManager.GetString("You", cultureInfo)
+                : astroPerson.Name;
+
+            sBuilder.Append($"{Constants.UI.Icons.Common.WHITE_CIRCLE} {name}\n" +
+                $"{astroPerson.DateToLongString(cultureInfo)}\n" +
+                $"{_localeManager.GetString("NatalPlanetsInfo", cultureInfo)}:\n\n");
 
             var i = 0;
 
@@ -459,44 +594,49 @@ namespace AstroTBotService.TBot
                     ? $"0{planet.ZodiacMinutes}"
                     : planet.ZodiacMinutes.ToString();
 
-                var planetIcon = PlanetIconDict[planet.Planet];
-                var zodiacIcon = ZodiacIconDict[planet.Zodiac];
+                var planetIcon = Constants.UI.PlanetIconDict[planet.Planet];
+                var zodiacIcon = Constants.UI.ZodiacIconDict[planet.Zodiac];
 
-                var retroIcon = planet.IsRetro ? Icons.Common.RETRO : string.Empty;
+                var retroIcon = planet.IsRetro ? Constants.UI.Icons.Common.RETRO : string.Empty;
                 var retroStr = planet.IsRetro ? " (R)" : string.Empty;
 
                 var planetStr = $"{planetIcon}{retroIcon}  {zodiacIcon}" +
-                    $"[{anglesStr}{Icons.Common.ANGLES}{minutesStr}{Icons.Common.MINUTES}]";
+                    $"[{anglesStr}{Constants.UI.Icons.Common.ANGLES}{minutesStr}{Constants.UI.Icons.Common.MINUTES}]";
 
                 var rulesHouses = string.Join(", ", planet.RulerHouses);
 
-                sb.Append($"{_localeManager.GetString(planet.Planet.ToString(), clientData.CultureInfo)}" +
+                sBuilder.Append($"{_localeManager.GetString(planet.Planet.ToString(), cultureInfo)}" +
                     $"{retroStr} " +
-                    $"{Icons.Common.MINUS} " +
+                    $"{Constants.UI.Icons.Common.MINUS} " +
                     $"{planetStr} " +
-                    $"{Icons.Common.MINUS} " +
+                    $"{Constants.UI.Icons.Common.MINUS} " +
                     $"( {planet.StandHouse} )" +
-                    $"{Icons.Common.MINUS} " +
+                    $"{Constants.UI.Icons.Common.MINUS} " +
                     $"[{rulesHouses}]\n");
 
                 i++;
 
                 if (i == 5)
                 {
-                    sb.Append("\n");
+                    sBuilder.Append("\n");
                 }
             }
 
-            return sb.ToString();
+            return sBuilder.ToString();
         }
 
-        public string GetHousesMessage(ChartInfo chartInfo, TBotClientData clientData)
+        public string GetHousesMessage(ChartInfo chartInfo, IAstroPerson astroPerson, CultureInfo cultureInfo)
         {
-            var sb = new StringBuilder();
+            var sBuilder = new StringBuilder();
 
-            sb.Append($"{Icons.Common.WHITE_CIRCLE} " +
-                $"{_localeManager.GetString("NatalHousesInfo", clientData.CultureInfo)}:\n" +
-                $"{clientData.AstroUser.DateToString(clientData.CultureInfo)}\n\n");
+            var name = astroPerson.IsUser == true
+                ? _localeManager.GetString("You", cultureInfo)
+                : astroPerson.Name;
+
+
+            sBuilder.Append($"{Constants.UI.Icons.Common.WHITE_CIRCLE} {name}\n" +
+                $"{astroPerson.DateToLongString(cultureInfo)}\n" +
+                $"{_localeManager.GetString("NatalHousesInfo", cultureInfo)}:\n\n");
 
             var i = 0;
 
@@ -514,27 +654,27 @@ namespace AstroTBotService.TBot
                     ? $"0{house.Value.ZodiacSeconds}"
                     : house.Value.ZodiacSeconds.ToString();
 
-                var zodiacIcon = ZodiacIconDict[house.Value.Zodiac];
+                var zodiacIcon = Constants.UI.ZodiacIconDict[house.Value.Zodiac];
 
                 var houseStr = $"{zodiacIcon} " +
-                    $"[{anglesStr}{Icons.Common.ANGLES}" +
-                    $"{minutesStr}{Icons.Common.MINUTES}" +
-                    $"{secondsStr}{Icons.Common.SECONDS}]";
+                    $"[{anglesStr}{Constants.UI.Icons.Common.ANGLES}" +
+                    $"{minutesStr}{Constants.UI.Icons.Common.MINUTES}" +
+                    $"{secondsStr}{Constants.UI.Icons.Common.SECONDS}]";
 
-                sb.Append($"{house.Key}" +
-                    $"{Icons.Common.MINUS} " +
+                sBuilder.Append($"{house.Key}" +
+                    $"{Constants.UI.Icons.Common.MINUS} " +
                     $"{houseStr}\n");
 
                 i++;
 
                 if (i == 3)
                 {
-                    sb.Append("\n");
+                    sBuilder.Append("\n");
                     i = 0;
                 }
             }
 
-            return sb.ToString();
+            return sBuilder.ToString();
         }
 
         private string GetAspectDescription(AspectInfo aspect, CultureInfo cultureInfo, ChartTypeEnum chartTypeEnum)
@@ -544,9 +684,9 @@ namespace AstroTBotService.TBot
                 aspect.Aspect.ToString() +
                 aspect.NatalPlanet.Planet.ToString();
 
-            if (_localeManager.TryGetString(aspectName, cultureInfo, out var descr1))
+            if (_localeManager.TryGetString(aspectName, cultureInfo, out var firstDescription))
             {
-                return descr1;
+                return firstDescription;
             }
 
             aspectName =
@@ -555,9 +695,9 @@ namespace AstroTBotService.TBot
                 aspect.Aspect.ToString() +
                 aspect.TransitPlanet.Planet.ToString();
 
-            if (_localeManager.TryGetString(aspectName, cultureInfo, out var descr2))
+            if (_localeManager.TryGetString(aspectName, cultureInfo, out var secondDescription))
             {
-                return descr2;
+                return secondDescription;
             }
 
             return string.Empty;

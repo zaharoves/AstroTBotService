@@ -7,36 +7,26 @@ namespace AstroTBotService
     public class ResourcesLocaleManager : IResourcesLocaleManager
     {
         private readonly ResourceManager _resourceManager;
+        private readonly CultureInfo _defaultCultureInfo;
 
         public ResourcesLocaleManager()
         {
             _resourceManager = new ResourceManager("AstroTBotService.Resources.Resources", Assembly.GetExecutingAssembly());
-        }
-
-        public string GetString(string name, string languageCode)
-        {
-            // Создаем CultureInfo из languageCode
-            var cultureInfo = new CultureInfo(languageCode);
-
-            // Получаем строку для конкретной культуры
-            return _resourceManager.GetString(name, cultureInfo) ??
-                   _resourceManager.GetString(name, new CultureInfo("en-US")) ?? // Возвращаем английский по умолчанию
-                   name; // Если ничего не найдено, возвращаем имя ключа
+            _defaultCultureInfo = new CultureInfo("en");
         }
 
         public string GetString(string name, CultureInfo cultureInfo)
         {
-            // Получаем строку для конкретной культуры
-            return _resourceManager.GetString(name, cultureInfo) ??
-                   _resourceManager.GetString(name, new CultureInfo("en-US")) ?? // Возвращаем английский по умолчанию
-                   name; // Если ничего не найдено, возвращаем имя ключа
+            return _resourceManager.GetString(name, cultureInfo)
+                ?? _resourceManager.GetString(name, _defaultCultureInfo)
+                ?? name;
         }
 
         public bool TryGetString(string name, CultureInfo cultureInfo, out string str)
         {
             str = _resourceManager.GetString(name, cultureInfo);
 
-            return !string.IsNullOrEmpty(str);
+            return !string.IsNullOrWhiteSpace(str);
         }
     }
 }

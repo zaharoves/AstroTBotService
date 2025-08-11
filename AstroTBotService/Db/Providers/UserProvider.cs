@@ -1,4 +1,5 @@
 ﻿using AstroTBotService.Db.Entities;
+using AstroTBotService.Entities;
 using AstroTBotService.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,10 +15,13 @@ namespace AstroTBotService.Db.Providers
             _appContext = appContext;
         }
 
+        #region User
+
         public async Task<AstroUser?> GetUser(long userId)
         {
             return await _appContext.AstroUsers
-                .FirstOrDefaultAsync(x => x.Id == userId);
+                .Include(p => p.ChildPersons)
+                .SingleOrDefaultAsync(p => p.Id == userId);
         }
 
         public async Task AddUser(AstroUser user)
@@ -27,11 +31,32 @@ namespace AstroTBotService.Db.Providers
                 return;
             }
 
+            user.IsChosen = true;
+
             _appContext.AstroUsers.Add(user);
             await _appContext.SaveChangesAsync();
         }
 
-        public async Task RemoveUser(AstroUser user)
+        public async Task EditUser(long userId, RedisPersonData personData)
+        {
+            var user = await _appContext.AstroUsers
+                .FirstOrDefaultAsync(p => p.Id == userId);
+
+            if (user == null)
+            {
+                return;
+            }
+
+            user.BirthDate = personData.GetDateTime();
+            user.TimeZoneOffset = personData.GetTimeZone();
+            user.Longitude = personData.Longitude;
+            user.Latitude = personData.Latitude;
+
+            _appContext.AstroUsers.Update(user);
+            await _appContext.SaveChangesAsync();
+        }
+
+        public async Task DeleteUser(AstroUser user)
         {
             if (user == null)
             {
@@ -42,41 +67,42 @@ namespace AstroTBotService.Db.Providers
             await _appContext.SaveChangesAsync();
         }
 
-        public async Task EditBirthday(long userId, DateTime? birthDateTime, TimeSpan? gmtOffset)
+        public async Task<IList<AstroPerson>?> GetUsersPersons(long userId)
         {
-            var user = await _appContext.AstroUsers
-                .FirstOrDefaultAsync(x => x.Id == userId);
+            return await _appContext.AstroPersons
+                .Where(p => p.ParentUserId == userId)
+                .ToListAsync();
+        }
 
-            if (user == null)
+        public async Task<UserStage?> GetUserStage(long userId)
+        {
+            return await _appContext.UsersStages
+                .FirstOrDefaultAsync(p => p.Id == userId);
+        }
+
+        public async Task SetUserStage(long userId, ChatStageEnum stageEnum)
+        {
+            var stage = _appContext.UsersStages
+                .FirstOrDefaultAsync(p => p.Id == userId).Result;
+
+            if (stage == null)
             {
-                return;
+                var userStage = new UserStage(userId, stageEnum.ToString());
+                _appContext.UsersStages.Add(userStage);
+            }
+            else
+            {
+                stage.Stage = stageEnum.ToString();
+                _appContext.UsersStages.Update(stage);
             }
 
-            if (birthDateTime.HasValue)
-            {
-                birthDateTime = DateTime.SpecifyKind(birthDateTime.Value, DateTimeKind.Utc);
-            }
-
-            user.BirthDate = birthDateTime;
-            user.GmtOffset = gmtOffset;
-
-            _appContext.AstroUsers.Update(user);
-
-            try
-            {
-                await _appContext.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                //TODO
-                var a = 0;
-            }
+            await _appContext.SaveChangesAsync();
         }
 
         public async Task EditLanguage(long userId, string? language)
         {
             var user = await _appContext.AstroUsers
-                .FirstOrDefaultAsync(x => x.Id == userId);
+                .FirstOrDefaultAsync(p => p.Id == userId);
 
             if (user == null)
             {
@@ -91,47 +117,14 @@ namespace AstroTBotService.Db.Providers
             user.Language = language;
 
             _appContext.AstroUsers.Update(user);
-            try
-            {
-                await _appContext.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                //TODO
-                var a = 0;
-            }
-        }
 
-        public async Task EditLocation(long userId, double? longitude, double? latitude)
-        {
-            var user = await _appContext.AstroUsers
-                .FirstOrDefaultAsync(x => x.Id == userId);
-
-            if (user == null)
-            {
-                return;
-            }
-
-            user.Longitude = longitude;
-            user.Latitude = latitude;
-
-            _appContext.AstroUsers.Update(user);
-
-            try
-            {
-                await _appContext.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                //TODO
-                var a = 0;
-            }
+            await _appContext.SaveChangesAsync();
         }
 
         public async Task EditHouseSystem(long userId, HouseSystemEnum houseSystem)
         {
             var user = await _appContext.AstroUsers
-                .FirstOrDefaultAsync(x => x.Id == userId);
+                .FirstOrDefaultAsync(p => p.Id == userId);
 
             if (user == null)
             {
@@ -141,40 +134,121 @@ namespace AstroTBotService.Db.Providers
             user.HouseSystem = houseSystem;
 
             _appContext.AstroUsers.Update(user);
-            try
-            {
-                await _appContext.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                //TODO
-                var a = 0;
-            }
+
+            await _appContext.SaveChangesAsync();
         }
 
-        public async Task SetUserStage(long userId, ChatStageEnum? stageEnum)
+        public async Task<bool> IsNewUser(long userId)
         {
-            var stage = _appContext.UsersStages
-                .FirstOrDefaultAsync(x => x.Id == userId).Result;
+            var user = await _appContext.AstroUsers
+                .SingleOrDefaultAsync(p => p.Id == userId);
 
-            if (stage == null)
+            return user?.BirthDate == null;
+        }
+
+        #endregion
+
+        #region Person
+
+        public async Task<AstroPerson?> GetPerson(long personId)
+        {
+            return await _appContext.AstroPersons
+                .Where(p => p.Id == personId)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task AddPerson(long userId, RedisPersonData personData)
+        {
+            if (personData == null)
             {
-                var userStage = new UserStage(userId, stageEnum?.ToString());
-                _appContext.UsersStages.Add(userStage);
+                return;
+            }
+
+            var astroPerson = new AstroPerson()
+            {
+                Name = personData.Name,
+                BirthDate = personData.GetDateTime(),
+                TimeZoneOffset = personData.GetTimeZone(),
+                ParentUserId = userId,
+                Longitude = personData.Longitude,
+                Latitude = personData.Latitude,
+                IsChosen = false
+            };
+
+            _appContext.AstroPersons.Add(astroPerson);
+            await _appContext.SaveChangesAsync();
+        }
+
+        public async Task AddOrEditPerson(long userId, long personId, RedisPersonData personData)
+        {
+            if (personData == null)
+            {
+                return;
+            }
+
+            var person = await _appContext.AstroPersons
+                .FirstOrDefaultAsync(p => p.Id == personId);
+
+            if (person == null)
+            {
+                await AddPerson(userId, personData);
+                return;
+            }
+
+            person.Name = personData.Name;
+            person.BirthDate = personData.GetDateTime();
+            person.TimeZoneOffset = personData.GetTimeZone();
+            person.ParentUserId = userId;
+            person.Longitude = personData.Longitude;
+            person.Latitude = personData.Latitude;
+
+            _appContext.AstroPersons.Update(person);
+            await _appContext.SaveChangesAsync();
+        }
+
+        public async Task DeletePerson(AstroPerson person)
+        {
+            if (person == null)
+            {
+                return;
+            }
+
+            _appContext.AstroPersons.Remove(person);
+            await _appContext.SaveChangesAsync();
+        }
+
+        public async Task DeletePerson(long id)
+        {
+            await _appContext.AstroPersons
+                .Where(p => p.Id == id)
+                .ExecuteDeleteAsync();
+
+            await _appContext.SaveChangesAsync();
+        }
+
+        public async Task UpdateChoosePersons(IAstroPerson firstPerson, IAstroPerson secondPerson)
+        {
+            if (firstPerson.IsUser == true)
+            {
+                _appContext.AstroUsers.Update((AstroUser)firstPerson);
             }
             else
             {
-                stage.Stage = stageEnum?.ToString();
-                _appContext.UsersStages.Update(stage);
+                _appContext.AstroPersons.Update((AstroPerson)firstPerson);
+            }
+
+            if (secondPerson.IsUser == true)
+            {
+                _appContext.AstroUsers.Update((AstroUser)secondPerson);
+            }
+            else
+            {
+                _appContext.AstroPersons.Update((AstroPerson)secondPerson);
             }
 
             await _appContext.SaveChangesAsync();
         }
 
-        public async Task<UserStage?> GetUserStage(long userId)
-        {
-            return await _appContext.UsersStages
-                .FirstOrDefaultAsync(x => x.Id == userId);
-        }
+        #endregion
     }
 }

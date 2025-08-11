@@ -191,6 +191,11 @@ namespace AstroTBotService.Common
 
             var aspects = new List<AspectInfo>();
 
+            if (dayPlanets.Count() == 0)
+            {
+                return aspects;
+            }
+
             foreach (var natalPlanet in natalChart.Planets.Values)
             {
                 foreach (var dayPlanet in dayChart.Planets.Values)
@@ -223,28 +228,28 @@ namespace AstroTBotService.Common
 
             var angles = Math.Abs(natalPlanet.AbsolutAngles - transitPlanet.AbsolutAngles);
 
-            if (angles >= aspectsOrb[AspectEnum.Conjunction].Min && angles <= Constants.CIRCLE_ANGLES ||
-               angles <= aspectsOrb[AspectEnum.Conjunction].Max && angles >= Constants.ZODIAC_ZERO)
+            if (angles >= aspectsOrb[AspectEnum.Conjunction].Min && angles <= Constants.Astro.CIRCLE_ANGLES ||
+               angles <= aspectsOrb[AspectEnum.Conjunction].Max && angles >= Constants.Astro.ZODIAC_ZERO)
             {
                 return new AspectInfo(natalPlanet, transitPlanet, AspectEnum.Conjunction);
             }
             else if (angles >= aspectsOrb[AspectEnum.Sextile].Min && angles <= aspectsOrb[AspectEnum.Sextile].Max ||
-                angles >= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Sextile].Max) && angles <= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Sextile].Min))
+                angles >= (Constants.Astro.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Sextile].Max) && angles <= (Constants.Astro.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Sextile].Min))
             {
                 return new AspectInfo(natalPlanet, transitPlanet, AspectEnum.Sextile);
             }
             else if (angles >= aspectsOrb[AspectEnum.Square].Min && angles <= aspectsOrb[AspectEnum.Square].Max ||
-                angles >= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Square].Max) && angles <= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Square].Min))
+                angles >= (Constants.Astro.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Square].Max) && angles <= (Constants.Astro.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Square].Min))
             {
                 return new AspectInfo(natalPlanet, transitPlanet, AspectEnum.Square);
             }
             else if (angles >= aspectsOrb[AspectEnum.Trine].Min && angles <= aspectsOrb[AspectEnum.Trine].Max ||
-                angles >= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Trine].Max) && angles <= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Trine].Min))
+                angles >= (Constants.Astro.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Trine].Max) && angles <= (Constants.Astro.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Trine].Min))
             {
                 return new AspectInfo(natalPlanet, transitPlanet, AspectEnum.Trine);
             }
             else if (angles >= aspectsOrb[AspectEnum.Opposition].Min && angles <= aspectsOrb[AspectEnum.Opposition].Max ||
-                angles >= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Opposition].Max) && angles <= (Constants.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Opposition].Min))
+                angles >= (Constants.Astro.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Opposition].Max) && angles <= (Constants.Astro.CIRCLE_ANGLES - aspectsOrb[AspectEnum.Opposition].Min))
             {
                 return new AspectInfo(natalPlanet, transitPlanet, AspectEnum.Opposition);
             }

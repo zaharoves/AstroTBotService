@@ -7,24 +7,32 @@ namespace AstroTBotService.Entities
 {
     public class TBotClientData
     {
-        public TBotClientData() 
-        { 
+        public TBotClientData()
+        {
         }
 
         public AstroUser AstroUser { get; set; }
 
-        public long ChatId => AstroUser.Id.Value;
+        public ChatStageEnum ChatStageEnum { get; set; }
 
-        public CultureInfo CultureInfo { get; set; }
+        public long AstroUserId
+        {
+            get
+            {
+                if (AstroUser?.Id == null)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return AstroUser.Id.Value;
+                }
+            }
+        }
+
         public Message Message { get; set; }
         public string? CallbackData { get; set; }
 
-        public DatePickerData DatePickerData { get; set; } 
-
-
-        public double? Longitude { get; set; }
-        public double? Latitude { get; set; }
-
-        public HouseSystemEnum HouseSystem { get; set; }
+        public RedisPersonData RedisPersonData { get; set; }
     }
 }

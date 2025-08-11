@@ -4,6 +4,6 @@ namespace AstroTBotService.Db.Providers
 {
     public interface IEphemerisProvider
     {
-        public void AddEphemerises(IEnumerable<Ephemeris> ephemeris);
+        public Task AddEphemerises(IEnumerable<Ephemeris> ephemeris);
     }
 }

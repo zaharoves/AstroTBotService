@@ -1,5 +1,6 @@
 ﻿
 using AstroTBotService.Db.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace AstroTBotService.Db.Providers
 {
@@ -13,13 +14,14 @@ namespace AstroTBotService.Db.Providers
             _appContext = appContext;
         }
 
-        public void AddEphemerises(IEnumerable<Ephemeris> ephemerises)
+        //TODO
+        public async Task AddEphemerises(IEnumerable<Ephemeris> ephemerises)
         {
-            _appContext.Ephemerises.AddRange(ephemerises);
-            _appContext.SaveChanges();
+            await _appContext.Ephemerises.AddRangeAsync(ephemerises);
+            await _appContext.SaveChangesAsync();
 
             // получаем объекты из бд и выводим на консоль
-            var ephs = _appContext.Ephemerises.ToList();
+            var ephs = await _appContext.Ephemerises.ToListAsync();
 
 
             //Console.WriteLine("Users list:");

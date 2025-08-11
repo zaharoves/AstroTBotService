@@ -8,11 +8,11 @@ namespace AstroTBotService.AstroCalculation.Entities
         public AspectOrbDictionary(double orb) 
             : base(new Dictionary<AspectEnum, (double Min, double Max)>
             {
-                { AspectEnum.Conjunction, (Constants.CIRCLE_ANGLES - orb, Constants.CONJUNCTION + orb) },
-                { AspectEnum.Sextile, (Constants.SEXTILE - orb, Constants.SEXTILE + orb) },
-                { AspectEnum.Square, (Constants.SQUARE - orb, Constants.SQUARE + orb) },
-                { AspectEnum.Trine, (Constants.TRINE - orb, Constants.TRINE + orb) },
-                { AspectEnum.Opposition, (Constants.OPPOSITION - orb, Constants.OPPOSITION + orb) },
+                { AspectEnum.Conjunction, (Constants.Astro.CIRCLE_ANGLES - orb, Constants.Astro.Aspects.CONJUNCTION + orb) },
+                { AspectEnum.Sextile, (Constants.Astro.Aspects.SEXTILE - orb, Constants.Astro.Aspects.SEXTILE + orb) },
+                { AspectEnum.Square, (Constants.Astro.Aspects.SQUARE - orb, Constants.Astro.Aspects.SQUARE + orb) },
+                { AspectEnum.Trine, (Constants.Astro.Aspects.TRINE - orb, Constants.Astro.Aspects.TRINE + orb) },
+                { AspectEnum.Opposition, (Constants.Astro.Aspects.OPPOSITION - orb, Constants.Astro.Aspects.OPPOSITION + orb) },
             })
         {
         }

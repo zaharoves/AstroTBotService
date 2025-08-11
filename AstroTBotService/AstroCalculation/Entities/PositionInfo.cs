@@ -10,10 +10,10 @@ namespace AstroTBotService.AstroCalculation.Entities
 
             AbsolutAngles = absolutAngles;
 
-            int zodiacInt = (int)absolutAngles / Constants.ZODIAC_ANGLES;
+            int zodiacInt = (int)absolutAngles / Constants.Astro.ZODIAC_ANGLES;
             Zodiac = (ZodiacEnum)Enum.GetValues(typeof(ZodiacEnum)).GetValue(zodiacInt);
 
-            var zodiacAbsAngles = absolutAngles % Constants.ZODIAC_ANGLES;
+            var zodiacAbsAngles = absolutAngles % Constants.Astro.ZODIAC_ANGLES;
 
             ZodiacAngles = (int)zodiacAbsAngles;
 

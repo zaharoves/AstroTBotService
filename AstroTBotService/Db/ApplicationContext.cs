@@ -1,30 +1,34 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using AstroTBotService.Db.Entities;
-using AstroTBotService.Configurations;
 
 namespace AstroTBotService.Db
 {
     public class ApplicationContext : DbContext
     {
-        private PostgresConfig _postgresConfig;
-
         public DbSet<Ephemeris> Ephemerises { get; }
         public DbSet<AstroUser> AstroUsers { get; }
+        public DbSet<AstroPerson> AstroPersons { get; }
+
         public DbSet<UserStage> UsersStages { get; }
 
-        public ApplicationContext(IOptions<PostgresConfig> postgresConfig)
+        public ApplicationContext(DbContextOptions<ApplicationContext> options)
+            : base(options)
         {
-            _postgresConfig = postgresConfig.Value;
-
             Ephemerises = Set<Ephemeris>();
             AstroUsers = Set<AstroUser>();
+            AstroPersons = Set<AstroPerson>();
             UsersStages = Set<UserStage>();
         }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            optionsBuilder.UseNpgsql(_postgresConfig.ConnectionString);
+            modelBuilder.Entity<AstroPerson>()
+                .HasOne(e => e.ParentUser)
+                .WithMany(a => a.ChildPersons)
+                .HasForeignKey(e => e.ParentUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            base.OnModelCreating(modelBuilder);
         }
     }
 }

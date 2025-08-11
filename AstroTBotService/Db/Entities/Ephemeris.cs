@@ -3,10 +3,6 @@ namespace AstroTBotService.Db.Entities
 {
     public class Ephemeris
     {
-        public Ephemeris()
-        {
-        }
-
         public long? Id { get; set; }
         public DateTime? DateTime { get; set; }
 
@@ -20,5 +16,7 @@ namespace AstroTBotService.Db.Entities
         public double? UranAngles { get; set; }
         public double? NeptuneAngles { get; set; }
         public double? PlutoAngles { get; set; }
+
+        //TODO ADD HOUSES ANGLES
     }
 }

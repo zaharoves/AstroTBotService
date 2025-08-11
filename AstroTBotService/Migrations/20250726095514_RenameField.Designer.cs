@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AstroTBotService.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    [Migration("20250717084528_InitCreate")]
-    partial class InitCreate
+    [Migration("20250726095514_RenameField")]
+    partial class RenameField
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,42 @@ namespace AstroTBotService.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("AstroTBotService.Db.Entities.AstroPerson", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("BirthDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<TimeSpan?>("GmtOffset")
+                        .HasColumnType("interval");
+
+                    b.Property<bool?>("IsChosen")
+                        .HasColumnType("boolean");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.Property<long?>("ParentUserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentUserId");
+
+                    b.ToTable("AstroPersons");
+                });
 
             modelBuilder.Entity("AstroTBotService.Db.Entities.AstroUser", b =>
                 {
@@ -38,6 +74,9 @@ namespace AstroTBotService.Migrations
 
                     b.Property<int>("HouseSystem")
                         .HasColumnType("integer");
+
+                    b.Property<bool?>("IsChosen")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Language")
                         .HasColumnType("text");
@@ -113,6 +152,21 @@ namespace AstroTBotService.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("UsersStages");
+                });
+
+            modelBuilder.Entity("AstroTBotService.Db.Entities.AstroPerson", b =>
+                {
+                    b.HasOne("AstroTBotService.Db.Entities.AstroUser", "ParentUser")
+                        .WithMany("ChildPersons")
+                        .HasForeignKey("ParentUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ParentUser");
+                });
+
+            modelBuilder.Entity("AstroTBotService.Db.Entities.AstroUser", b =>
+                {
+                    b.Navigation("ChildPersons");
                 });
 #pragma warning restore 612, 618
         }

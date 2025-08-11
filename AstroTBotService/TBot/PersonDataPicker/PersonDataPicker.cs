@@ -5,16 +5,14 @@ using AstroTBotService.Entities;
 
 namespace AstroTBotService.TBot
 {
-    public class DatePicker : IDatePicker
+    public class PersonDataPicker : IPersonDataPicker
     {
         private readonly ITelegramBotClient _botClient;
         private readonly ITClientHelper _clientHelper;
         private readonly IResourcesLocaleManager _resourcesLocaleManager;
         private readonly IResourcesLocaleManager _localeManager;
 
-        private readonly char _saparator = '_';
-
-        public DatePicker(
+        public PersonDataPicker(
             ITelegramBotClient botClient,
             ITClientHelper clientHelper,
             IResourcesLocaleManager resourcesLocaleManager,
@@ -26,48 +24,15 @@ namespace AstroTBotService.TBot
             _localeManager = localeManager;
         }
 
-        public bool TryParseDateTimePicker(TBotClientData clientData, out DatePickerData datePickerData)
+        public async Task EditToYearIntervalPicker(TBotClientData clientData, string text)
         {
-            datePickerData = new DatePickerData();
+            var keyboard = GetYearIntervalKeyboard(clientData);
 
-            try
-            {
-                if (clientData.CallbackData == null)
-                {
-                    return false;
-                }
-
-                var parts = clientData.CallbackData.Split(_saparator);
-
-                var isSaveCommand = parts.Length > 8 && parts[8] == Constants.UI.ButtonCommands.SAVE_BIRTHDAY;
-                var isChangeCommand = parts.Length > 8 && parts[8] == Constants.UI.ButtonCommands.CHANGE_BIRTHDAY;
-                var isCancelCommand = parts.Length > 8 && (parts[8] == Constants.UI.ButtonCommands.SEND_MAIN_MENU || parts[8] == Constants.UI.ButtonCommands.EDIT_TO_MAIN_MENU);
-
-                var gmtOffset = parts.Length > 7 && TimeSpan.TryParse(parts[7], out var _gmtOffset) ? _gmtOffset : TimeSpan.MinValue;
-
-                var minute = parts.Length > 6 && int.TryParse(parts[6], out var _minute) ? _minute : 0;
-                var hour = parts.Length > 5 && int.TryParse(parts[5], out var _hour) ? _hour : 1;
-                var day = parts.Length > 4 && int.TryParse(parts[4], out var _day) ? _day : 1;
-                var month = parts.Length > 3 && int.TryParse(parts[3], out var _month) ? _month : 1;
-                var year = parts.Length > 2 && int.TryParse(parts[2], out var _year) ? _year : 1;
-                var yearInterval = parts.Length > 1 && int.TryParse(parts[1], out var _yearInterval) ? _yearInterval : 1;
-
-                var dateTime = new DateTime(year, month, day, hour, minute, 0, DateTimeKind.Utc);
-
-                datePickerData.MinYearInterval = yearInterval;
-                datePickerData.DateTime = dateTime;
-                datePickerData.GmtOffset = gmtOffset;
-
-                datePickerData.IsSaveCommand = isSaveCommand;
-                datePickerData.IsChangeCommand = isChangeCommand;
-                datePickerData.IsCancelCommand = isCancelCommand;
-            }
-            catch (Exception ex)
-            {
-                return false;
-            }
-
-            return true;
+            await _botClient.EditMessageText(
+                chatId: clientData.AstroUserId,
+                messageId: clientData.Message.Id,
+                text: text,
+                replyMarkup: keyboard);
         }
 
         public async Task SendYearIntervalPicker(TBotClientData clientData, string text)
@@ -75,7 +40,7 @@ namespace AstroTBotService.TBot
             var keyboard = GetYearIntervalKeyboard(clientData);
 
             await _botClient.SendMessage(
-                chatId: clientData.ChatId,
+                chatId: clientData.AstroUserId,
                 text: text,
                 replyMarkup: keyboard);
         }
@@ -85,7 +50,7 @@ namespace AstroTBotService.TBot
             var keyboard = GetYearKeyboard(clientData);
 
             await _botClient.EditMessageText(
-                chatId: clientData.ChatId,
+                chatId: clientData.AstroUserId,
                 messageId: clientData.Message.Id,
                 text: text,
                 replyMarkup: keyboard);
@@ -96,7 +61,7 @@ namespace AstroTBotService.TBot
             var keyboard = GetMonthKeyboard(clientData);
 
             await _botClient.EditMessageText(
-                chatId: clientData.ChatId,
+                chatId: clientData.AstroUserId,
                 messageId: clientData.Message.Id,
                 text: text,
                 replyMarkup: keyboard);
@@ -106,8 +71,8 @@ namespace AstroTBotService.TBot
         {
             var keyboard = GetDaysKeyboard(clientData);
 
-            await _botClient.EditMessageText( //EditMessageReplyMarkup??
-                chatId: clientData.ChatId,
+            await _botClient.EditMessageText(
+                chatId: clientData.AstroUserId,
                 messageId: clientData.Message.Id,
                 text: text,
                 replyMarkup: keyboard);
@@ -118,7 +83,7 @@ namespace AstroTBotService.TBot
             var keyboard = GetHourKeyboard(clientData);
 
             await _botClient.EditMessageText(
-                chatId: clientData.ChatId,
+                chatId: clientData.AstroUserId,
                 messageId: clientData.Message.Id,
                 text: text,
                 replyMarkup: keyboard);
@@ -129,7 +94,7 @@ namespace AstroTBotService.TBot
             var keyboard = GetMinuteKeyboard(clientData);
 
             await _botClient.EditMessageText(
-                chatId: clientData.ChatId,
+                chatId: clientData.AstroUserId,
                 messageId: clientData.Message.Id,
                 text: text,
                 replyMarkup: keyboard);
@@ -140,7 +105,7 @@ namespace AstroTBotService.TBot
             var keyboard = GetGmtKeyboard(clientData);
 
             await _botClient.EditMessageText(
-                chatId: clientData.ChatId,
+                chatId: clientData.AstroUserId,
                 messageId: clientData.Message.Id,
                 text: text,
                 replyMarkup: keyboard);
@@ -148,29 +113,17 @@ namespace AstroTBotService.TBot
 
         public async Task SendConfirmDate(TBotClientData clientData, string text)
         {
-            var prefixCommand = $"{Constants.UI.ButtonCommands.DATE_PICKER}" +
-                $"{_saparator}{clientData?.DatePickerData?.MinYearInterval}" +
-                $"{_saparator}{clientData?.DatePickerData?.DateTime?.Year}" +
-                $"{_saparator}{clientData?.DatePickerData?.DateTime?.Month}" +
-                $"{_saparator}{clientData?.DatePickerData?.DateTime?.Day}" +
-                $"{_saparator}{clientData?.DatePickerData?.DateTime?.Hour}" +
-                $"{_saparator}{clientData?.DatePickerData?.DateTime?.Minute}" +
-                $"{_saparator}{clientData?.DatePickerData?.GmtOffset}";
-
-            // Создаем список рядов кнопок
             var inlineKeyboard = new InlineKeyboardMarkup(new[]
             {
                 new []
                 {
                     InlineKeyboardButton.WithCallbackData(
-                        $"{_resourcesLocaleManager.GetString("Save", clientData.CultureInfo)} {Constants.UI.Icons.Common.GREEN_CIRCLE}", 
-                        $"{prefixCommand}" +
-                        $"{_saparator}{Constants.UI.ButtonCommands.SAVE_BIRTHDAY}"),
+                        $"{_resourcesLocaleManager.GetString("Save", clientData.AstroUser.CultureInfo)} {Constants.UI.Icons.Common.GREEN_CIRCLE}",
+                        $"{Constants.UI.Buttons.Commands.SAVE_BIRTHDAY}"),
 
                     InlineKeyboardButton.WithCallbackData(
-                        $"{_resourcesLocaleManager.GetString("Change", clientData.CultureInfo)} {Constants.UI.Icons.Common.YELLOW_CIRCLE}", 
-                        $"{prefixCommand}" +
-                        $"{_saparator}{Constants.UI.ButtonCommands.CHANGE_BIRTHDAY}"),
+                        $"{_resourcesLocaleManager.GetString("Change", clientData.AstroUser.CultureInfo)} {Constants.UI.Icons.Common.YELLOW_CIRCLE}",
+                        $"{Constants.UI.Buttons.Commands.CHANGE_BIRTHDAY}"),
                 },
                 new []
                 {
@@ -178,9 +131,8 @@ namespace AstroTBotService.TBot
                 }
             });
 
-            await _botClient.EditMessageText(
-                chatId: clientData.ChatId,
-                messageId: clientData.Message.Id,
+            await _botClient.SendMessage(
+                chatId: clientData.AstroUserId,
                 text: text,
                 replyMarkup: inlineKeyboard);
         }
@@ -190,22 +142,20 @@ namespace AstroTBotService.TBot
             var dateTimePicker = new List<List<InlineKeyboardButton>>();
 
             var currentYear = DateTime.Now.Year;
-            var intervalsCount = ((currentYear - Constants.START_INTERVAL_YEAR) / Constants.YEARS_INTERVAL) + 1;
+            var intervalsCount = ((currentYear - Constants.UI.START_INTERVAL_YEAR) / Constants.UI.YEARS_INTERVAL) + 1;
 
-            //10 years per row
             for (var rowNum = 0; rowNum < intervalsCount; rowNum++)
             {
-                var startInterval = $"{Constants.START_INTERVAL_YEAR + (Constants.YEARS_INTERVAL * rowNum)}";
+                var startInterval = $"{Constants.UI.START_INTERVAL_YEAR + (Constants.UI.YEARS_INTERVAL * rowNum)}";
                 var endInterval = rowNum == intervalsCount - 1
                     ? currentYear.ToString()
-                    : $"{Constants.START_INTERVAL_YEAR + (Constants.YEARS_INTERVAL * (rowNum + 1)) - 1}";
+                    : $"{Constants.UI.START_INTERVAL_YEAR + (Constants.UI.YEARS_INTERVAL * (rowNum + 1)) - 1}";
 
                 var row = new List<InlineKeyboardButton>
                 {
                     InlineKeyboardButton.WithCallbackData(
                     $"{startInterval} - {endInterval}",
-                    $"{Constants.UI.ButtonCommands.DATE_PICKER}" +
-                    $"{_saparator}{Constants.START_INTERVAL_YEAR + (Constants.YEARS_INTERVAL * rowNum)}")
+                    $"{Constants.UI.START_INTERVAL_YEAR + (Constants.UI.YEARS_INTERVAL * rowNum)}")
                 };
 
                 dateTimePicker.Add(row);
@@ -224,30 +174,28 @@ namespace AstroTBotService.TBot
             var dateTimePicker = new List<List<InlineKeyboardButton>>();
             var currentYear = DateTime.Now.Year;
 
-            ///Max count rows <see cref="Constants.YEARS_INTERVAL"/> / <see cref="Constants.YEARS_PER_ROW"/> rows
-            for (var rowNum = 0; rowNum < Constants.YEARS_INTERVAL / Constants.YEARS_PER_ROW; rowNum++)
+            ///Max count rows <see cref="Constants.UI.YEARS_INTERVAL"/> / <see cref="Constants.UI.YEARS_PER_ROW"/> rows
+            for (var rowNum = 0; rowNum < Constants.UI.YEARS_INTERVAL / Constants.UI.YEARS_PER_ROW; rowNum++)
             {
                 var row = new List<InlineKeyboardButton>();
                 int? yearNum = 0;
 
-                ///Count columns <see cref="Constants.YEARS_PER_ROW"/>
-                for (var columnNum = 0; columnNum < 5; columnNum++)
+                ///Count columns <see cref="Constants.UI.YEARS_PER_ROW"/>
+                for (var columnNum = 0; columnNum < Constants.UI.YEARS_PER_ROW; columnNum++)
                 {
-                    yearNum = clientData?.DatePickerData?.MinYearInterval + rowNum * Constants.YEARS_PER_ROW + columnNum;
+                    yearNum = clientData?.RedisPersonData?.StartYearInterval + rowNum * Constants.UI.YEARS_PER_ROW + columnNum;
 
                     if (yearNum > currentYear)
                     {
                         row.Add(InlineKeyboardButton.WithCallbackData(
                         " ",
-                        Constants.UI.ButtonCommands.IGNORE));
+                        Constants.UI.Buttons.Commands.IGNORE));
                     }
                     else
                     {
                         row.Add(InlineKeyboardButton.WithCallbackData(
                         $"{yearNum}",
-                        $"{Constants.UI.ButtonCommands.DATE_PICKER}" +
-                        $"{_saparator}{clientData?.DatePickerData?.MinYearInterval}" +
-                        $"{_saparator}{yearNum}"));
+                        $"{yearNum}"));
                     }
                 }
 
@@ -271,24 +219,21 @@ namespace AstroTBotService.TBot
         {
             var dateTimePicker = new List<List<InlineKeyboardButton>>();
 
-            DateTimeFormatInfo dtFormatInfo = clientData.CultureInfo.DateTimeFormat;
+            DateTimeFormatInfo dtFormatInfo = clientData.AstroUser.CultureInfo.DateTimeFormat;
 
             //4 Rows
-            for (var rowNum = 0; rowNum < 4; rowNum++)
+            for (var rowNum = 0; rowNum < Constants.UI.MONTHS_PER_ROW; rowNum++)
             {
                 var row = new List<InlineKeyboardButton>();
 
                 //3 Months per row
-                for (var columnNum = 0; columnNum < 3; columnNum++)
+                for (var columnNum = 0; columnNum < (Constants.UI.MONTHS_COUNT / Constants.UI.MONTHS_PER_ROW); columnNum++)
                 {
                     var monthNum = rowNum * 3 + columnNum + 1;
 
                     row.Add(InlineKeyboardButton.WithCallbackData(
-                        $"{dtFormatInfo.GetAbbreviatedMonthName(monthNum)}", 
-                        $"{Constants.UI.ButtonCommands.DATE_PICKER}" +
-                        $"{_saparator}{clientData?.DatePickerData?.MinYearInterval}" +
-                        $"{_saparator}{clientData?.DatePickerData?.DateTime?.Year}" +
-                        $"{_saparator}{monthNum}"));
+                        $"{dtFormatInfo.GetAbbreviatedMonthName(monthNum)}",
+                        $"{monthNum}"));
                 }
 
                 dateTimePicker.Add(row);
@@ -304,18 +249,17 @@ namespace AstroTBotService.TBot
 
         private InlineKeyboardMarkup GetDaysKeyboard(TBotClientData clientData)
         {
-            if (clientData.DatePickerData?.DateTime == null)
+            if (clientData.RedisPersonData?.GetDateTime() == null)
             {
                 return null;
             }
 
             var dateTimePicker = new List<List<InlineKeyboardButton>>();
 
-            var daysInMonth = DateTime.DaysInMonth(clientData.DatePickerData.DateTime.Value.Year, clientData.DatePickerData.DateTime.Value.Month);
+            var daysInMonth = DateTime.DaysInMonth(clientData.RedisPersonData.GetDateTime().Year, clientData.RedisPersonData.GetDateTime().Month);
             var currentDay = 1;
 
-            //4 or 5 Rows
-            for (var rowNum = 0; rowNum < 5; rowNum++)
+            for (var rowNum = 0; rowNum < Constants.UI.DAYS_COLUMNS_COUNT; rowNum++)
             {
                 var row = new List<InlineKeyboardButton>();
 
@@ -324,22 +268,17 @@ namespace AstroTBotService.TBot
                     break;
                 }
 
-                //7 Days per row
-                for (var columnNum = 0; columnNum < 7; columnNum++)
+                for (var columnNum = 0; columnNum < Constants.UI.DAYS_PER_ROW; columnNum++)
                 {
                     if (currentDay > daysInMonth)
                     {
-                        row.Add(InlineKeyboardButton.WithCallbackData(" ", Constants.UI.ButtonCommands.IGNORE));
+                        row.Add(InlineKeyboardButton.WithCallbackData(" ", Constants.UI.Buttons.Commands.IGNORE));
                         continue;
                     }
 
                     row.Add(InlineKeyboardButton.WithCallbackData(
-                        $"{currentDay}", 
-                        $"{Constants.UI.ButtonCommands.DATE_PICKER}" +
-                        $"{_saparator}{clientData?.DatePickerData?.MinYearInterval}" +
-                        $"{_saparator}{clientData?.DatePickerData?.DateTime?.Year}" +
-                        $"{_saparator}{clientData?.DatePickerData?.DateTime?.Month}" +
-                        $"{_saparator}{currentDay}"));
+                        $"{currentDay}",
+                        $"{currentDay}"));
 
                     currentDay++;
                 }
@@ -361,24 +300,17 @@ namespace AstroTBotService.TBot
 
             var currentHour = 0;
 
-            //4 Rows
-            for (var rowNum = 0; rowNum < 4; rowNum++)
+            for (var rowNum = 0; rowNum < (Constants.UI.HOURS_COUNT / Constants.UI.HOURS_PER_ROW); rowNum++)
             {
                 var row = new List<InlineKeyboardButton>();
 
-                //6 Cells per row
-                for (var columnNum = 0; columnNum < 6; columnNum++)
+                for (var columnNum = 0; columnNum < Constants.UI.HOURS_PER_ROW; columnNum++)
                 {
                     var hourString = currentHour < 10 ? $"0{currentHour}" : currentHour.ToString();
 
                     row.Add(InlineKeyboardButton.WithCallbackData(
-                        $"{hourString}", 
-                        $"{Constants.UI.ButtonCommands.DATE_PICKER}" +
-                        $"{_saparator}{clientData?.DatePickerData?.MinYearInterval}" +
-                        $"{_saparator}{clientData?.DatePickerData?.DateTime?.Year}" +
-                        $"{_saparator}{clientData?.DatePickerData?.DateTime?.Month}" +
-                        $"{_saparator}{clientData?.DatePickerData?.DateTime?.Day}" +
-                        $"{_saparator}{currentHour}"));
+                        $"{hourString}",
+                        $"{currentHour}"));
 
                     currentHour++;
                 }
@@ -400,25 +332,17 @@ namespace AstroTBotService.TBot
 
             var currentMinute = 0;
 
-            //10 Rows
-            for (var rowNum = 0; rowNum < 10; rowNum++)
+            for (var rowNum = 0; rowNum < (Constants.UI.MINUTES_COUNT / Constants.UI.MINUTES_PER_ROW); rowNum++)
             {
                 var row = new List<InlineKeyboardButton>();
 
-                //6 Cells per row
-                for (var columnNum = 0; columnNum < 6; columnNum++)
+                for (var columnNum = 0; columnNum < Constants.UI.MINUTES_PER_ROW; columnNum++)
                 {
                     var minuteString = currentMinute < 10 ? $"0{currentMinute}" : currentMinute.ToString();
 
                     row.Add(InlineKeyboardButton.WithCallbackData(
-                        $"{minuteString}", 
-                        $"{Constants.UI.ButtonCommands.DATE_PICKER}" +
-                        $"{_saparator}{clientData?.DatePickerData?.MinYearInterval}" +
-                        $"{_saparator}{clientData?.DatePickerData?.DateTime?.Year}" +
-                        $"{_saparator}{clientData?.DatePickerData?.DateTime?.Month}" +
-                        $"{_saparator}{clientData?.DatePickerData?.DateTime?.Day}" +
-                        $"{_saparator}{clientData?.DatePickerData?.DateTime?.Hour}" +
-                        $"{_saparator}{currentMinute}"));
+                        $"{minuteString}",
+                        $"{currentMinute}"));
 
                     currentMinute++;
                 }
@@ -438,24 +362,15 @@ namespace AstroTBotService.TBot
         {
             var dateTimePicker = new List<List<InlineKeyboardButton>>();
 
-            foreach(var timeZone in Constants.TIME_ZONE_DICT)
+            foreach (var timeZone in Constants.TIME_ZONE_DICT)
             {
                 var row = new List<InlineKeyboardButton>();
 
-                var buttonText = GetTimeZoneDescription(timeZone, clientData.CultureInfo);
+                var buttonText = GetTimeZoneDescription(timeZone, clientData.AstroUser.CultureInfo);
 
                 row.Add(InlineKeyboardButton.WithCallbackData(
                     buttonText,
-                    $"{Constants.UI.ButtonCommands.DATE_PICKER}" +
-                    $"{_saparator}{clientData?.DatePickerData?.MinYearInterval}" +
-                    $"{_saparator}{clientData?.DatePickerData?.DateTime?.Year}" +
-                    $"{_saparator}{clientData?.DatePickerData?.DateTime?.Month}" +
-                    $"{_saparator}{clientData?.DatePickerData?.DateTime?.Day}" +
-                    $"{_saparator}{clientData?.DatePickerData?.DateTime?.Hour}" +
-                    $"{_saparator}{clientData?.DatePickerData?.DateTime?.Minute}" +
-                    $"{_saparator}{timeZone}"));
-                //TODO
-               
+                    $"{timeZone}"));
 
                 dateTimePicker.Add(row);
             }

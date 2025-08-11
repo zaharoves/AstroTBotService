@@ -1,33 +1,25 @@
 ﻿using AstroTBotService.Enums;
-using System.Globalization;
-using static AstroTBotService.Constants.UI;
 
 namespace AstroTBotService
 {
     public static class Constants
     {
-        public const int START_INTERVAL_YEAR = 1900;
-        public const int YEARS_INTERVAL = 20;
-        public const int YEARS_PER_ROW = 5;
+        public static class Astro
+        {
+            public static ushort ZODIAC_ZERO = 0;
+            public static ushort ZODIAC_ANGLES = 30;
+            public static ushort CIRCLE_ANGLES = 360;
 
-        public static ushort ZODIAC_ZERO = 0;
-        public static ushort ZODIAC_ANGLES = 30;
-        public static ushort CIRCLE_ANGLES = 360;
+            public static class Aspects
+            {
+                public static ushort CONJUNCTION = 0;
+                public static ushort SEXTILE = 60;
+                public static ushort SQUARE = 90;
+                public static ushort TRINE = 120;
+                public static ushort OPPOSITION = 180;
+            }
+        }
 
-        //Aspects
-        public static ushort CONJUNCTION = 0;
-        public static ushort SEXTILE = 60;
-        public static ushort SQUARE = 90;
-        public static ushort TRINE = 120;
-        public static ushort OPPOSITION = 180;
-
-
-        /// <summary>
-        /// Max telegram message length
-        /// </summary>
-        public const int MAX_T_MESSAGE_LENGTH = 4096;
-
-        //TODO Concurrent
         public static readonly IReadOnlyList<TimeSpan> TIME_ZONE_DICT =
             new List<TimeSpan>()
             {
@@ -65,7 +57,6 @@ namespace AstroTBotService
                 {new TimeSpan(12, 0, 0) }
         };
 
-        //TODO Concurrent
         public static readonly IReadOnlyDictionary<ZodiacEnum, PlanetEnum> HOUSES_RULER_DICT =
             new Dictionary<ZodiacEnum, PlanetEnum>()
         {
@@ -86,42 +77,88 @@ namespace AstroTBotService
             { ZodiacEnum.Pisces, PlanetEnum.Neptune }
         };
 
+        public static class Redis
+        {
+            public const string FORBID_TIME = "ForbidTime";
+            public const string SEPARATOR = "_";
+        }
+
         public static class UI
         {
+            /// <summary>
+            /// Max telegram message length
+            /// </summary>
+            public const int MAX_T_MESSAGE_LENGTH = 4096;
+
+            public const int START_INTERVAL_YEAR = 1900;
+            public const int YEARS_INTERVAL = 20;
+            public const int YEARS_PER_ROW = 5;
+
+            public const int MONTHS_COUNT = 12;
+            public const int MONTHS_PER_ROW = 4;
+
+            public const int DAYS_PER_ROW = 7;
+            public const int DAYS_COLUMNS_COUNT = 5;
+
+            public const int HOURS_COUNT = 24;
+            public const int HOURS_PER_ROW = 6;
+
+            public const int MINUTES_COUNT = 60;
+            public const int MINUTES_PER_ROW = 6;
+
             public static class MessageCommands
             {
                 public const string START = "/start";
                 public const string SET_BIRTHDATE = "/setbirthdate";
-                public const string SET_LOCATION = "/setbirthlocation";
                 public const string SET_LANGUAGE = "/setlanguage";
                 public const string SET_HOUSES_SYSTEM = "/sethousessystem";
             }
 
-            public static class ButtonCommands
+            public static class Buttons
             {
-                public const string IGNORE = "ignore";
+                public const string SEPARATOR = "_";
 
-                public const string DATE_PICKER = "dateTimePicker";
+                public static class CommandTypes
+                {
+                    public const string GET = "G";
+                    public const string EDIT = "E";
+                    public const string DELETE = "D";
+                }
 
-                public const string SET_BIRTHDATE = "setBirthdate";
-                public const string SAVE_BIRTHDAY = "saveBirthday";
-                public const string CHANGE_BIRTHDAY = "changeBirthday";
+                public static class PersonTypes
+                {
+                    public const string USER = "U";
+                    public const string PERSON = "P";
+                }
 
-                public const string SET_BIRTH_LOCATION = "setBirthLocation";
-                public const string SAVE_BIRTH_LOCATION = "saveBirthLocation";
-                public const string CHANGE_BIRTH_LOCATION = "changeBirthLocation";
+                public static class Commands
+                {
+                    public const string IGNORE = "ignore";
 
-                public const string SEND_MAIN_MENU = "sendMainMenu";
-                public const string EDIT_TO_MAIN_MENU = "editToMainMenu";
+                    public const string SEND_MENU = "sendMenu";
+                    public const string EDIT_TO_MENU = "editToMenu";
 
-                public const string NATAL_CHART = "natalChart";
-                public const string TRANSIT_FORECAST = "transitForecast";
-                public const string DIRECTION_FORECAST = "directionForecast";
+                    public const string ADD_USER = "addUser";
+                    public const string ADD_PERSON = "addPerson";
 
-                public const string POSITIVE_FORECAST = "positiveForecast";
+                    public const string SAVE_BIRTHDAY = "saveBirthday";
+                    public const string CHANGE_BIRTHDAY = "changeBirthday";
+
+                    public const string GET_PERSONS = "getPersons";
+                    public const string EDIT_PERSON = "editPerson";
+                    public const string DELETE_PERSON = "deletePerson";
+
+                    public const string SET_BIRTH_LOCATION = "setBirthLocation";
+                    public const string SAVE_BIRTH_LOCATION = "saveBirthLocation";
+                    public const string CHANGE_BIRTH_LOCATION = "changeBirthLocation";
+
+                    public const string NATAL_CHART = "natalChart";
+                    public const string TRANSIT_DAILY_FORECAST = "transitDailyForecast";
+                    public const string DIRECTION_FORECAST = "directionForecast";
+                    public const string POSITIVE_FORECAST = "positiveForecast";
+                }
             }
 
-            //TODO COncurrent
             public static IReadOnlyDictionary<ChartTypeEnum, string> ChartTypeIconDict =
                 new Dictionary<ChartTypeEnum, string>
                 {
@@ -130,7 +167,6 @@ namespace AstroTBotService
                     { ChartTypeEnum.Direction, Icons.Common.PURPLE_CIRCLE }
                 };
 
-            //TODO COncurrent
             public static IReadOnlyDictionary<ZodiacEnum, string> ZodiacIconDict =
                 new Dictionary<ZodiacEnum, string>
                 {
@@ -151,7 +187,6 @@ namespace AstroTBotService
                     { ZodiacEnum.Pisces, Icons.Zodiac.PISCES }
                 };
 
-            //TODO COncurrent
             public static IReadOnlyDictionary<PlanetEnum, string> PlanetIconDict =
                 new Dictionary<PlanetEnum, string>
                 {
@@ -170,7 +205,6 @@ namespace AstroTBotService
                 { PlanetEnum.Pluto, Icons.Planets.PLUTO }
                 };
 
-            //TODO COncurrent
             public static IReadOnlyDictionary<AspectEnum, string> AspectIconDict =
                 new Dictionary<AspectEnum, string>
                 {
@@ -182,20 +216,11 @@ namespace AstroTBotService
                 { AspectEnum.Opposition, Icons.Aspects.OPPOSITION }
                 };
 
-            //TODO COncurrent
-            public static IReadOnlyDictionary<string, CultureInfo> LocaleDict =
-                new Dictionary<string, CultureInfo>
-                {
-                { "ru", new CultureInfo("ru-RU") },
-                { "en", new CultureInfo("en-US") }
-                };
-
-            //TODO COncurrent
             public static IReadOnlyDictionary<string, (string Icon, string Description)> FlagsInfoDict =
                 new Dictionary<string, (string Icon, string Description)>
                 {
-                { "ru-RU", (Icons.Flags.RUSSIAN, "Русский") },
-                { "en-US", (Icons.Flags.ENGLISH, "English" ) }
+                    { "ru", (Icons.Flags.RUSSIAN, "Русский") },
+                    { "en", (Icons.Flags.ENGLISH, "English" ) }
                 };
 
             public static class Icons
@@ -266,6 +291,19 @@ namespace AstroTBotService
 
                 public static class Common
                 {
+                    public const string MOON_GROWING = "🌛";
+                    public const string MOON_FACE = "🌝";
+                    public const string MOON_BLACK_FACE = "🌚";
+
+                    public const string MOON_1 = "🌔";
+                    public const string MOON_2 = "🌓";
+                    public const string MOON_3 = "🌒";
+                    public const string MOON_4 = "🌑";
+                    public const string MOON_5 = "🌘";
+                    public const string MOON_6 = "🌗";
+                    public const string MOON_7 = "🌖";
+                    public const string MOON_8 = "🌕";
+
                     public const string EARTH = "🌍";
                     public const string MAP = "🗺️";
 
@@ -275,7 +313,7 @@ namespace AstroTBotService
                     public const string SECONDS = "\"";
 
                     public const string CHOOSED = "✅";
-                    public const string REJECTED = "❌";
+                    public const string X_RED = "❌";
                     public const string EDIT = "✏️";
                     public const string SAVE = "💾";
 
@@ -290,6 +328,7 @@ namespace AstroTBotService
 
                     public const string NEXT = "➡️";
                     public const string PREVIOUS = "⬅️";
+                    public const string BACK = "↪️";
 
                     public const string SCIENCE = "⚛️";
                     public const string SUN = "☀️";
@@ -317,6 +356,9 @@ namespace AstroTBotService
                     public const string BLACK_SQUARE = "⬛";
                     public const string WHITE_SQUARE = "⬜";
 
+                    public const string BLUE_BIG_RHOMB = "🔷";
+                    public const string BLUE_SMALL_RHOMB = "🔹";
+
                     public const string CLOCK_1 = "🕐";
                     public const string CLOCK_2 = "🕑";
                     public const string CLOCK_3 = "🕒";
@@ -330,6 +372,16 @@ namespace AstroTBotService
                     public const string CLOCK_10 = "🕠";
 
                     public const string HOUSE = "🏠";
+
+                    /// <summary>
+                    /// Man, black hair, black mustache
+                    /// </summary>
+                    public const string FACE_MAN_1 = "👨🏻‍🦱";
+
+                    /// <summary>
+                    /// woman, red hair
+                    /// </summary>
+                    public const string FACE_WOMAN_1 = "👩🏻‍🦰";
                 }
 
                 public static class Flags

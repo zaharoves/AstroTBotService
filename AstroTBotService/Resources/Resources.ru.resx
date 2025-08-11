@@ -129,32 +129,32 @@
   <data name="ChangeBirthLocation" xml:space="preserve">
     <value>Изменить место рождения</value>
   </data>
-  <data name="ChooseBirthDay" xml:space="preserve">
+  <data name="ChooseYourBirthDay" xml:space="preserve">
     <value>Выберите день Вашего рождения</value>
   </data>
-  <data name="ChooseBirthHour" xml:space="preserve">
+  <data name="ChooseYourBirthHour" xml:space="preserve">
     <value>Выберите час Вашего рождения</value>
   </data>
-  <data name="ChooseBirthLocation" xml:space="preserve">
+  <data name="ChooseYourBirthLocation" xml:space="preserve">
     <value>Выберите место Вашего рождения.
 
 Для этого нажмите на 📎 рядом с вводом сообщения. 
 После чего выберите "Геопозиция".
 После выбора нажмите "Отправить геопозицию".</value>
   </data>
-  <data name="ChooseBirthMinute" xml:space="preserve">
+  <data name="ChooseYourBirthMinute" xml:space="preserve">
     <value>Выберите минуту Вашего рождения</value>
   </data>
-  <data name="ChooseBirthMonth" xml:space="preserve">
+  <data name="ChooseYourBirthMonth" xml:space="preserve">
     <value>Выберите месяц Вашего рождения</value>
   </data>
-  <data name="ChooseBirthYear" xml:space="preserve">
+  <data name="ChooseYourBirthYear" xml:space="preserve">
     <value>Выберите год Вашего рождения</value>
   </data>
   <data name="ChooseLanguage" xml:space="preserve">
     <value>Выберите язык</value>
   </data>
-  <data name="ChooseTimeZone" xml:space="preserve">
+  <data name="ChooseYourTimeZone" xml:space="preserve">
     <value>Выберите часовой пояс Вашего рождения</value>
   </data>
   <data name="Conjunction" xml:space="preserve">
@@ -1808,7 +1808,7 @@
   <data name="Sun" xml:space="preserve">
     <value>Солнце</value>
   </data>
-  <data name="ToMainMenu" xml:space="preserve">
+  <data name="ToMenu" xml:space="preserve">
     <value>На главную</value>
   </data>
   <data name="TransitAspectsInfo" xml:space="preserve">
@@ -5532,8 +5532,8 @@
   <data name="YourBirthDate" xml:space="preserve">
     <value>Дата Вашего рождения</value>
   </data>
-  <data name="YourLocation" xml:space="preserve">
-    <value>Место Вашего рождения</value>
+  <data name="Location" xml:space="preserve">
+    <value>Место рождения</value>
   </data>
   <data name="DirectionForecastButton" xml:space="preserve">
     <value>Рассчитать дирекции на сегодня</value>
@@ -5553,7 +5553,86 @@
   <data name="Porphyry" xml:space="preserve">
     <value>Порфирий</value>
   </data>
-  <data name="YourHousesSystem" xml:space="preserve">
+  <data name="HousesSystem" xml:space="preserve">
     <value>Система домов</value>
+  </data>
+  <data name="Database" xml:space="preserve">
+    <value>База данных</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Добавить</value>
+  </data>
+  <data name="ChoosePersonMessage" xml:space="preserve">
+    <value>Выберите человека для расчета</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Удалить</value>
+  </data>
+  <data name="EnterPersonName" xml:space="preserve">
+    <value>Введите имя человека</value>
+  </data>
+  <data name="You" xml:space="preserve">
+    <value>Вы</value>
+  </data>
+  <data name="ChoosePersonName" xml:space="preserve">
+    <value>Введите имя</value>
+  </data>
+  <data name="Back" xml:space="preserve">
+    <value>Назад</value>
+  </data>
+  <data name="ChooseDeletePersonMessage" xml:space="preserve">
+    <value>Выберите человека для удаления</value>
+  </data>
+  <data name="ChooseEditPersonMessage" xml:space="preserve">
+    <value>Выберите человека для изменения данных</value>
+  </data>
+  <data name="BirthDate" xml:space="preserve">
+    <value>Дата рождения</value>
+  </data>
+  <data name="ChooseBirthDay" xml:space="preserve">
+    <value>Выберите день рождения</value>
+  </data>
+  <data name="ChooseBirthHour" xml:space="preserve">
+    <value>Выберите час рождения</value>
+  </data>
+  <data name="ChooseBirthLocation" xml:space="preserve">
+    <value>Выберите место рождения.
+
+Для этого нажмите на 📎 рядом с вводом сообщения. 
+После чего выберите "Геопозиция".
+После выбора нажмите "Отправить геопозицию".</value>
+  </data>
+  <data name="ChooseBirthMinute" xml:space="preserve">
+    <value>Выберите минуту рождения</value>
+  </data>
+  <data name="ChooseBirthMonth" xml:space="preserve">
+    <value>Выберите месяц рождения</value>
+  </data>
+  <data name="ChooseBirthYear" xml:space="preserve">
+    <value>Выберите год рождения</value>
+  </data>
+  <data name="ChooseTimeZone" xml:space="preserve">
+    <value>Выберите часовой пояс рождения</value>
+  </data>
+  <data name="EnterYourPersonName" xml:space="preserve">
+    <value>Введите Ваше имя</value>
+  </data>
+  <data name="MaxPersonsCountError" xml:space="preserve">
+    <value>Максимальное кол-во добавленных людей равно 3</value>
+  </data>
+  <data name="PersonNameLengthError" xml:space="preserve">
+    <value>Необходимо ввести имя длиной &lt; 16 символов</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Имя</value>
+  </data>
+  <data name="NewPersonDataForEditing" xml:space="preserve">
+    <value>Новые данные</value>
+  </data>
+  <data name="OldPersonDataForEditing" xml:space="preserve">
+    <value>Редактирование</value>
+  </data>
+  <data name="PleaseWait" xml:space="preserve">
+    <value>Пожалуйста, подождите...</value>
   </data>
 </root>

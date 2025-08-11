@@ -2,25 +2,24 @@
 {
     public enum ChatStageEnum
     {
-        MainMenu,
+        Menu,
+        Persons,
+
+        PersonNamePicker,
 
         YearIntervalPicker,
         YearPicker,
         MonthPicker,
+
         DayPicker,
         HourPicker,
         MinutePicker,
+
         TimeZonePicker,
+        BirthLocationPicker,
         ConfirmBirthday,
 
-        //BirthLongitudePicker,
-        //BirthLatitudePicker,
-        BirthLocationPicker,
-        ConfirmBirthLocation,
-
         LanguagePicker,
-        HouseSystemPicker,
-
-        ProcessingResult
+        HouseSystemPicker
     }
 }

@@ -3,6 +3,7 @@ using System;
 using AstroTBotService.Db;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AstroTBotService.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20250727092337_ChangePersonsRefs")]
+    partial class ChangePersonsRefs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -33,6 +36,9 @@ namespace AstroTBotService.Migrations
                     b.Property<DateTime?>("BirthDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<TimeSpan?>("GmtOffset")
+                        .HasColumnType("interval");
+
                     b.Property<bool?>("IsChosen")
                         .HasColumnType("boolean");
 
@@ -48,9 +54,6 @@ namespace AstroTBotService.Migrations
                     b.Property<long?>("ParentUserId")
                         .HasColumnType("bigint");
 
-                    b.Property<TimeSpan?>("TimeZoneOffset")
-                        .HasColumnType("interval");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ParentUserId");
@@ -65,6 +68,9 @@ namespace AstroTBotService.Migrations
 
                     b.Property<DateTime?>("BirthDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<TimeSpan?>("GmtOffset")
+                        .HasColumnType("interval");
 
                     b.Property<int>("HouseSystem")
                         .HasColumnType("integer");
@@ -86,9 +92,6 @@ namespace AstroTBotService.Migrations
 
                     b.Property<long?>("ParentUserId")
                         .HasColumnType("bigint");
-
-                    b.Property<TimeSpan?>("TimeZoneOffset")
-                        .HasColumnType("interval");
 
                     b.HasKey("Id");
 

@@ -118,40 +118,44 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Cancel" xml:space="preserve">
-    <value>Cancel !</value>
+    <value>Cancel</value>
   </data>
   <data name="Change" xml:space="preserve">
-    <value>Change !</value>
+    <value>Change</value>
   </data>
   <data name="ChangeBirthDate" xml:space="preserve">
-    <value>Change birth date !</value>
+    <value>Change birth date</value>
   </data>
   <data name="ChangeBirthLocation" xml:space="preserve">
     <value>Change birth location</value>
   </data>
-  <data name="ChooseBirthDay" xml:space="preserve">
-    <value>Choose Your birth day !</value>
+  <data name="ChooseYourBirthDay" xml:space="preserve">
+    <value>Choose Your birth day</value>
   </data>
-  <data name="ChooseBirthHour" xml:space="preserve">
-    <value>Choose Your birth hour !</value>
+  <data name="ChooseYourBirthHour" xml:space="preserve">
+    <value>Choose Your birth hour</value>
   </data>
-  <data name="ChooseBirthLocation" xml:space="preserve">
-    <value>Choose Your birth location</value>
+  <data name="ChooseYourBirthLocation" xml:space="preserve">
+    <value>Choose your birth location.
+
+Click on 📎 next to the message entry. 
+Then select "Location".
+After selecting it, click "Send location".</value>
   </data>
-  <data name="ChooseBirthMinute" xml:space="preserve">
-    <value>Choose Your birth minute !</value>
+  <data name="ChooseYourBirthMinute" xml:space="preserve">
+    <value>Choose Your birth minute</value>
   </data>
-  <data name="ChooseBirthMonth" xml:space="preserve">
+  <data name="ChooseYourBirthMonth" xml:space="preserve">
     <value>Choose Your birth month</value>
   </data>
-  <data name="ChooseBirthYear" xml:space="preserve">
-    <value>Choose Your birth year !</value>
+  <data name="ChooseYourBirthYear" xml:space="preserve">
+    <value>Choose Your birth year</value>
   </data>
   <data name="ChooseLanguage" xml:space="preserve">
-    <value>Choose language !</value>
+    <value>Choose language</value>
   </data>
-  <data name="ChooseTimeZone" xml:space="preserve">
-    <value>Choose Your time zone !</value>
+  <data name="ChooseYourTimeZone" xml:space="preserve">
+    <value>Choose Your time zone</value>
   </data>
   <data name="Conjunction" xml:space="preserve">
     <value>Conjunction</value>
@@ -1808,7 +1812,7 @@ You love everything new, such as technology, and want to keep up to date with th
   <data name="Sun" xml:space="preserve">
     <value>Sun</value>
   </data>
-  <data name="ToMainMenu" xml:space="preserve">
+  <data name="ToMenu" xml:space="preserve">
     <value>Home !</value>
   </data>
   <data name="TransitAspectsInfo" xml:space="preserve">
@@ -5532,8 +5536,8 @@ This time is also favorable for social relations and business activities related
   <data name="YourBirthDate" xml:space="preserve">
     <value>Your birth date !</value>
   </data>
-  <data name="YourLocation" xml:space="preserve">
-    <value>Your location</value>
+  <data name="Location" xml:space="preserve">
+    <value>Location</value>
   </data>
   <data name="DirectionForecastButton" xml:space="preserve">
     <value>Proccess direction forecast</value>
@@ -5553,7 +5557,86 @@ This time is also favorable for social relations and business activities related
   <data name="Porphyry" xml:space="preserve">
     <value>Porphyry</value>
   </data>
-  <data name="YourHousesSystem" xml:space="preserve">
+  <data name="HousesSystem" xml:space="preserve">
     <value>Houses system</value>
+  </data>
+  <data name="Database" xml:space="preserve">
+    <value>Database</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="ChoosePersonMessage" xml:space="preserve">
+    <value>Choose person</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="EnterPersonName" xml:space="preserve">
+    <value>Enter person name</value>
+  </data>
+  <data name="You" xml:space="preserve">
+    <value>You</value>
+  </data>
+  <data name="ChoosePersonName" xml:space="preserve">
+    <value>Enter person's name</value>
+  </data>
+  <data name="Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="ChooseDeletePersonMessage" xml:space="preserve">
+    <value>Choose a person to delete</value>
+  </data>
+  <data name="ChooseEditPersonMessage" xml:space="preserve">
+    <value>Choose a person to edit</value>
+  </data>
+  <data name="BirthDate" xml:space="preserve">
+    <value>Birth date</value>
+  </data>
+  <data name="ChooseBirthDay" xml:space="preserve">
+    <value>Choose birth day</value>
+  </data>
+  <data name="ChooseBirthHour" xml:space="preserve">
+    <value>Choose birth hour</value>
+  </data>
+  <data name="ChooseBirthLocation" xml:space="preserve">
+    <value>Choose birth location.
+
+Click on 📎 next to the message entry. 
+Then select "Location".
+After selecting it, click "Send location".</value>
+  </data>
+  <data name="ChooseBirthMinute" xml:space="preserve">
+    <value>Choose birth minute</value>
+  </data>
+  <data name="ChooseBirthMonth" xml:space="preserve">
+    <value>Choose birth month</value>
+  </data>
+  <data name="ChooseBirthYear" xml:space="preserve">
+    <value>Choose birth year</value>
+  </data>
+  <data name="ChooseTimeZone" xml:space="preserve">
+    <value>Choose time zone</value>
+  </data>
+  <data name="EnterYourPersonName" xml:space="preserve">
+    <value>Enter your name</value>
+  </data>
+  <data name="MaxPersonsCountError" xml:space="preserve">
+    <value>Max persons count = 3</value>
+  </data>
+  <data name="PersonNameLengthError" xml:space="preserve">
+    <value>You should enter a name that is less than 16 characters long</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="NewPersonDataForEditing" xml:space="preserve">
+    <value>New person's data</value>
+  </data>
+  <data name="OldPersonDataForEditing" xml:space="preserve">
+    <value>Editing</value>
+  </data>
+  <data name="PleaseWait" xml:space="preserve">
+    <value>Please, wait...</value>
   </data>
 </root>

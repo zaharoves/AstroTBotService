@@ -3,6 +3,7 @@ using System;
 using AstroTBotService.Db;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AstroTBotService.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    partial class ApplicationContextModelSnapshot : ModelSnapshot
+    [Migration("20250722085346_AddUserEmailField")]
+    partial class AddUserEmailField
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,42 +24,6 @@ namespace AstroTBotService.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("AstroTBotService.Db.Entities.AstroPerson", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime?>("BirthDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool?>("IsChosen")
-                        .HasColumnType("boolean");
-
-                    b.Property<double?>("Latitude")
-                        .HasColumnType("double precision");
-
-                    b.Property<double?>("Longitude")
-                        .HasColumnType("double precision");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("text");
-
-                    b.Property<long?>("ParentUserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<TimeSpan?>("TimeZoneOffset")
-                        .HasColumnType("interval");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ParentUserId");
-
-                    b.ToTable("AstroPersons");
-                });
 
             modelBuilder.Entity("AstroTBotService.Db.Entities.AstroUser", b =>
                 {
@@ -66,10 +33,13 @@ namespace AstroTBotService.Migrations
                     b.Property<DateTime?>("BirthDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<TimeSpan?>("GmtOffset")
+                        .HasColumnType("interval");
+
                     b.Property<int>("HouseSystem")
                         .HasColumnType("integer");
 
-                    b.Property<bool?>("IsChosen")
+                    b.Property<bool?>("IsChoosen")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Language")
@@ -86,9 +56,6 @@ namespace AstroTBotService.Migrations
 
                     b.Property<long?>("ParentUserId")
                         .HasColumnType("bigint");
-
-                    b.Property<TimeSpan?>("TimeZoneOffset")
-                        .HasColumnType("interval");
 
                     b.HasKey("Id");
 
@@ -159,21 +126,12 @@ namespace AstroTBotService.Migrations
                     b.ToTable("UsersStages");
                 });
 
-            modelBuilder.Entity("AstroTBotService.Db.Entities.AstroPerson", b =>
+            modelBuilder.Entity("AstroTBotService.Db.Entities.AstroUser", b =>
                 {
                     b.HasOne("AstroTBotService.Db.Entities.AstroUser", "ParentUser")
                         .WithMany("ChildPersons")
                         .HasForeignKey("ParentUserId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("ParentUser");
-                });
-
-            modelBuilder.Entity("AstroTBotService.Db.Entities.AstroUser", b =>
-                {
-                    b.HasOne("AstroTBotService.Db.Entities.AstroUser", "ParentUser")
-                        .WithMany()
-                        .HasForeignKey("ParentUserId");
 
                     b.Navigation("ParentUser");
                 });

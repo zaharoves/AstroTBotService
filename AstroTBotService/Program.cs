@@ -5,19 +5,22 @@ using AstroTBotService.Db.Providers;
 using AstroTBotService.TBot;
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
-using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
-using Telegram.Bot.Types.Enums;
 using Serilog;
 using Serilog.Debugging;
 using AstroTBotService.Common;
-
+using Serilog.Sinks.PostgreSQL;
+using NpgsqlTypes;
+using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
+using AstroTBotService.Redis;
 
 namespace AstroTBotService
 {
     public class Program
     {
-        private static ITelegramBotClient telegramBotClient = new TelegramBotClient("7633316207:AAER-wgES9FTiehku-TeQy7C2wXSMj1AqZo");
+        private static ITelegramBotClient _telegramBotClient;
+        private static IHost host;
 
         public static async Task Main(string[] args)
         {
@@ -27,19 +30,25 @@ namespace AstroTBotService
 
             var hostBuilder = builder.ConfigureServices((hostContext, services) =>
             {
+                services.Configure<TelegramBotConfig>(hostContext.Configuration.GetSection(TelegramBotConfig.ConfigKey));
                 services.Configure<PostgresConfig>(hostContext.Configuration.GetSection(PostgresConfig.ConfigKey));
                 services.Configure<AstroConfig>(hostContext.Configuration.GetSection(AstroConfig.ConfigKey));
                 services.Configure<SerilogConfig>(hostContext.Configuration.GetSection(SerilogConfig.ConfigKey));
+                services.Configure<RedisConfig>(hostContext.Configuration.GetSection(RedisConfig.ConfigKey));
 
-                services.AddSingleton(provider => telegramBotClient);
+                var telegramConfig = hostContext.Configuration.GetSection(TelegramBotConfig.ConfigKey).Get<TelegramBotConfig>();
+
+                if (string.IsNullOrWhiteSpace(telegramConfig?.ApiKey))
+                {
+                    Console.WriteLine("EMPTY TELEGRAM API KEY!");
+                    return;
+                }
+
+                _telegramBotClient = new TelegramBotClient(telegramConfig.ApiKey);
+
+                services.AddSingleton(provider => _telegramBotClient);
                 services.AddSingleton<IResourcesLocaleManager, ResourcesLocaleManager>();
                 services.AddSingleton<ICommonHelper, CommonHelper>();
-
-                services.AddScoped(serviceProvider =>
-                {
-                    var config = serviceProvider.GetRequiredService<IOptions<PostgresConfig>>();
-                    return new ApplicationContext(config);
-                });
 
                 services.AddScoped<ICalculationService, CalculationService>();
                 services.AddScoped<IUserProvider, UserProvider>();
@@ -48,92 +57,82 @@ namespace AstroTBotService
 
                 services.AddScoped<ITClientHelper, TClientHelper>();
                 services.AddScoped<IUpdateHandler, TBotUpdateHandler>();
-                services.AddScoped<IDatePicker, DatePicker>();
-                services.AddScoped<ILocationPicker, LocationPicker>();
+                services.AddScoped<IPersonDataPicker, PersonDataPicker>();
+
+                services.AddDbContext<ApplicationContext>((serviceProvider, optionsBuilder) =>
+                {
+                    var postgresOptions = serviceProvider.GetRequiredService<IOptions<PostgresConfig>>().Value;
+                    optionsBuilder.UseNpgsql(postgresOptions.ConnectionString);
+
+                    optionsBuilder.EnableSensitiveDataLogging();
+                });
+
+                var redisConfig = hostContext.Configuration.GetSection(RedisConfig.ConfigKey).Get<RedisConfig>();
+                services.AddSingleton<IConnectionMultiplexer>(sp =>
+                {
+                    return ConnectionMultiplexer.Connect(redisConfig.ConnectionString);
+                });
+
+                services.AddTransient(sp => sp.GetRequiredService<IConnectionMultiplexer>().GetDatabase());
+                services.AddSingleton<IRedisService, RedisService>();
+
+                services.AddLogging(configure =>
+                {
+                    configure.ClearProviders();
+                    configure.AddSerilog(dispose: true);
+                });
+
+                services.AddHostedService<TBotService>();
             });
 
-            // 2. Настраиваем Serilog, используя IOptions
             hostBuilder.UseSerilog((context, services, configuration) =>
             {
-
-                // Получаем экземпляр SerilogOptions из DI-контейнера
                 var serilogOptions = services.GetRequiredService<IOptions<SerilogConfig>>().Value;
 
-                configuration.WriteTo.PostgreSQL(
-                    serilogOptions.ConnectionString,
-                    serilogOptions.TableName,
-                    needAutoCreateTable: true
-                    //columnOptions: columnOptions
+                IDictionary<string, ColumnWriterBase> columnOptions = new Dictionary<string, ColumnWriterBase>
+                {
+                    {"user_chat_id", new SinglePropertyColumnWriter("user_chat_id", PropertyWriteMethod.ToString, NpgsqlDbType.Text, "l") },
+                    {"message", new RenderedMessageColumnWriter(NpgsqlDbType.Text) },
+                    {"level", new LevelColumnWriter(true, NpgsqlDbType.Varchar) },
+                    {"timestamp", new TimestampColumnWriter(NpgsqlDbType.Timestamp) },
+                    {"exception", new ExceptionColumnWriter(NpgsqlDbType.Text) },
+                    {"properties", new LogEventSerializedColumnWriter(NpgsqlDbType.Jsonb) },
+                    //{"props_test", new PropertiesColumnWriter(NpgsqlDbType.Jsonb) },
+                };
+
+                configuration
+                    .Enrich.FromLogContext()
+                    //.MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Error)
+                    .WriteTo.PostgreSQL(
+                        serilogOptions.ConnectionString,
+                        serilogOptions.TableName,
+                        needAutoCreateTable: true,
+                        columnOptions: columnOptions
                     );
 
+
                 //if (context.HostingEnvironment.IsProduction() == false)
-                //{
-                configuration.WriteTo.Console().MinimumLevel.Debug();
-                configuration.Enrich.WithProperty("Sample App 1", "Sample App");
-
-
-                //NEW
-
-                //var columnOptions = new Serilog.Sinks.PostgreSQL.ColumnOptions();
-                //columnOptions.CustomColumns.Add("Properties", new Serilog.Sinks.PostgreSQL.ColumnWriters.LogEventSerializedColumnWriter(NpgsqlTypes.NpgsqlDbType.Jsonb));
-
-                //configuration
-                //    .ReadFrom.Configuration(context.Configuration) 
-                //    .ReadFrom.Services(services)
-                //    .Enrich.FromLogContext();
-                //.WriteTo.PostgreSQL(
-                //    serilogOptions.ConnectionString,
-                //    serilogOptions.TableName,
-                //    needAutoCreateTable: true,
-                //    columnOptions: columnOptions
-                //);
-                //}
             });
 
-            var host = hostBuilder.Build();
+            host = hostBuilder.Build();
 
-            // Получаем Singleton-экземпляр ITelegramBotClient из корневого провайдера
-            var botClient = host.Services.GetRequiredService<ITelegramBotClient>();
-
-            // Запуск Long Polling
-            using var cts = new CancellationTokenSource();
-
-            var receiverOptions = new ReceiverOptions
-            {
-                AllowedUpdates = Array.Empty<UpdateType>() // Получаем все типы обновлений
-            };
-
-            botClient.StartReceiving(
-                async (client, update, token) =>
-                {
-                    using (var scope = host.Services.CreateScope())
-                    {
-                        var updateHandler = scope.ServiceProvider.GetRequiredService<IUpdateHandler>();
-                        await updateHandler.HandleUpdateAsync(botClient, update, token);
-                    }
-                },
-                async (client, exception, token) =>
-                {
-                    Console.WriteLine($"Polling error: {exception.Message}");
-
-                    if (exception is ApiRequestException apiRequestException)
-                    {
-                        Console.WriteLine($"Telegram API Error: {apiRequestException.ErrorCode} - {apiRequestException.Message}");
-                    }
-
-                    await Task.CompletedTask;
-                },
-                receiverOptions,
-                cts.Token
-            );
+            //TODO TEST CONNECTIONS
 
 
+            var me = await _telegramBotClient.GetMe();
+            Console.WriteLine($"Start listening for @{me.Username}");
+
+            await host.RunAsync();
+        }
+
+        public static async Task Test(IHost host)
+        {
+            //test
             var year = 2020;
             var month = 5;
             var month1 = 4;
 
 
-            //test
             var a = host.Services.GetRequiredService<ISwissEphemerisService>();
             var b0 = a.GetDataTest(new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc));
             await Console.Out.WriteLineAsync(b0.Info[0].ToString());
@@ -169,11 +168,6 @@ namespace AstroTBotService
             //await Console.Out.WriteLineAsync(b7.Info[0].ToString());
 
             //test
-
-            var me = await botClient.GetMe();
-            Console.WriteLine($"Start listening for @{me.Username}");
-
-            await host.RunAsync();
         }
     }
 }
