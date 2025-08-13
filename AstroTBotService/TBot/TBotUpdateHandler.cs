@@ -1185,6 +1185,9 @@ namespace AstroTBotService.TBot
             var chatId = update?.CallbackQuery?.Message?.Chat?.Id
                 ?? update?.Message?.Chat?.Id;
 
+            var userName = update?.CallbackQuery?.From?.Username
+                ?? update?.Message?.From?.Username;
+
             if (!chatId.HasValue)
             {
                 _logger.LogError("Getting user chat id error.");
@@ -1204,6 +1207,7 @@ namespace AstroTBotService.TBot
                 astroUser = new AstroUser()
                 {
                     Id = chatId,
+                    Name = userName,
                     BirthDate = null,
                     TimeZoneOffset = null,
                     Language = defaultLanguage,
@@ -1215,6 +1219,15 @@ namespace AstroTBotService.TBot
             else
             {
                 _logger.LogInformation($"User info is received.");
+                                
+                if (!string.IsNullOrWhiteSpace(userName) && 
+                    (string.IsNullOrWhiteSpace(astroUser.Name) || astroUser.Name != userName))
+                {
+                    _logger.LogInformation($"Updating user name from '{astroUser.Name}' to '{userName}'");
+                    astroUser.Name = userName;
+
+                    await _userProvider.UpdateUserName(astroUser.Id.Value, userName);
+                }
             }
 
             return astroUser;

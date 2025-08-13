@@ -19,7 +19,7 @@ namespace AstroTBotService.Db.Providers
 
         Task EditLanguage(long userId, string? language);
         Task EditHouseSystem(long userId, HouseSystemEnum houseSystem);
-
+        Task UpdateUserName(long userId, string userName);
 
         Task<bool> IsNewUser(long userId);
 

@@ -138,6 +138,23 @@ namespace AstroTBotService.Db.Providers
             await _appContext.SaveChangesAsync();
         }
 
+        public async Task UpdateUserName(long userId, string userName)
+        {
+            var user = await _appContext.AstroUsers
+                .FirstOrDefaultAsync(p => p.Id == userId);
+
+            if (user == null)
+            {
+                return;
+            }
+
+            user.Name = userName;
+
+            _appContext.AstroUsers.Update(user);
+
+            await _appContext.SaveChangesAsync();
+        }
+
         public async Task<bool> IsNewUser(long userId)
         {
             var user = await _appContext.AstroUsers
