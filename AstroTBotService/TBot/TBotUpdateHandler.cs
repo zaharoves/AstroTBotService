@@ -50,18 +50,22 @@ namespace AstroTBotService.TBot
                 {
                     await _userProvider.SetUserStage(user.Id.Value, ChatStageEnum.Menu);
                 }
-
-                if (!Enum.TryParse(typeof(ChatStageEnum), userStage?.Stage, out var userStageObj))
+                else if (string.IsNullOrWhiteSpace(userStage.Stage))
                 {
-                    _logger.LogError($"Wrong chat stage: {userStage?.Stage?.ToString()}. Set Menu stage.");
+                    _logger.LogWarning($"User stage is null or empty for user {user.Id.Value}. Setting to Menu stage.");
+                    
+                    await _userProvider.SetUserStage(user.Id.Value, ChatStageEnum.Menu);
+                }
+                else if (!Enum.TryParse(typeof(ChatStageEnum), userStage.Stage, out var userStageObj))
+                {
+                    _logger.LogError($"Wrong chat stage: {userStage.Stage}. Set Menu stage.");
 
                     await _userProvider.SetUserStage(user.Id.Value, ChatStageEnum.Menu);
-                    stage = ChatStageEnum.Menu;
-
-                    return;
                 }
-
-                stage = (ChatStageEnum)userStageObj;
+                else
+                {
+                    stage = (ChatStageEnum)userStageObj;
+                }
 
                 personData = await _redisService.GetPersonData(user.Id.Value);
             }

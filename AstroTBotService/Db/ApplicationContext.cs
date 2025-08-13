@@ -28,6 +28,13 @@ namespace AstroTBotService.Db
                 .HasForeignKey(e => e.ParentUserId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            modelBuilder.Entity<UserStage>()
+                .HasKey(e => e.Id);
+
+            modelBuilder.Entity<UserStage>()
+                .Property(e => e.Id)
+                .ValueGeneratedNever();
+
             base.OnModelCreating(modelBuilder);
         }
     }

@@ -116,13 +116,36 @@ namespace AstroTBotService
 
             host = hostBuilder.Build();
 
-            //TODO TEST CONNECTIONS
-
+            // Test connections
+            await TestConnections(host);
 
             var me = await _telegramBotClient.GetMe();
             Console.WriteLine($"Start listening for @{me.Username}");
 
             await host.RunAsync();
+        }
+
+        public static async Task TestConnections(IHost host)
+        {
+            try
+            {
+                //Postgres
+                using var scope = host.Services.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
+                await dbContext.Database.CanConnectAsync();
+                Console.WriteLine("PostgreSQL connection: OK");
+
+                //Redis
+                var redisConnection = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexer>();
+                var redisDatabase = redisConnection.GetDatabase();
+                await redisDatabase.PingAsync();
+                Console.WriteLine("Redis connection: OK");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Connection test failed: {ex.Message}");
+                throw;
+            }
         }
 
         public static async Task Test(IHost host)

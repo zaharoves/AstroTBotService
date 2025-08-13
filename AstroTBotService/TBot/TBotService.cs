@@ -109,17 +109,23 @@ namespace AstroTBotService.TBot
                         catch (Exception ex)
                         {
                             _logger.LogError(ex, "Handle update error");
-
-                            await _redisService.DeleteMessageForbidTime(chatId);
+                        }
+                        finally
+                        {
+                            try
+                            {
+                                await _redisService.DeleteMessageForbidTime(chatId);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, $"Error deleting forbid time for chat {chatId}");
+                            }
                         }
                     }
                 },
                 _cts.Token);
 
-            Task callbackTask = task.ContinueWith(async (action) =>
-            {
-                await _redisService.DeleteMessageForbidTime(chatId);
-            });
+            await task;
         }
 
         private async Task ErrorHandler(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)

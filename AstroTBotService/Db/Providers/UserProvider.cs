@@ -82,8 +82,8 @@ namespace AstroTBotService.Db.Providers
 
         public async Task SetUserStage(long userId, ChatStageEnum stageEnum)
         {
-            var stage = _appContext.UsersStages
-                .FirstOrDefaultAsync(p => p.Id == userId).Result;
+            var stage = await _appContext.UsersStages
+                .FirstOrDefaultAsync(p => p.Id == userId);
 
             if (stage == null)
             {

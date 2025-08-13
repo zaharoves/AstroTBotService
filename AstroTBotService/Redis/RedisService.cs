@@ -50,6 +50,13 @@ namespace AstroTBotService.Redis
         {
             var key = $"{mainUserId}{Constants.Redis.SEPARATOR}{Constants.Redis.FORBID_TIME}";
 
+            var isKeyExists = await _database.KeyExistsAsync(key);
+            
+            if (!isKeyExists)
+            {
+                return true;
+            }
+
             var isSuccess = await _database.KeyDeleteAsync(key);
 
             if (!isSuccess)
@@ -315,7 +322,6 @@ namespace AstroTBotService.Redis
 
             if (!await _database.KeyExistsAsync(mainUserId.ToString()))
             {
-                _logger.LogError($"Can't find redis value. Key: {mainUserId}.");
                 return new RedisPersonData();
             }
 
@@ -324,11 +330,20 @@ namespace AstroTBotService.Redis
 
         public async Task<bool> DeletePersonData(long mainUserId)
         {
-            var isSuccess = await _database.KeyDeleteAsync(mainUserId.ToString());
+            var key = mainUserId.ToString();
+            
+            var keyExists = await _database.KeyExistsAsync(key);
+            
+            if (!keyExists)
+            {
+                return true;
+            }
+
+            var isSuccess = await _database.KeyDeleteAsync(key);
 
             if (!isSuccess)
             {
-                _logger.LogError($"Can't delete redis value. Key: {mainUserId}.");
+                _logger.LogError($"Can't delete redis value. Key: {key}.");
             }
 
             return isSuccess;
