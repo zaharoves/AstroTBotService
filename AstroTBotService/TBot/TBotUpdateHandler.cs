@@ -549,14 +549,6 @@ namespace AstroTBotService.TBot
                     }
                 }
             }
-            //Wrong redis value
-            else
-            {
-                var errorMessage = $"Wrong Redis {nameof(ClientData.RedisPersonData.EditingPersonType)}: {ClientData.RedisPersonData.EditingPersonType}";
-                _logger.LogError(errorMessage);
-
-                throw new ArgumentException(errorMessage);
-            }
 
             //New Data
             var birthDate = string.Empty;
