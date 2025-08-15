@@ -1,7 +1,7 @@
-﻿using AstroTBotService.AstroCalculation.Entities;
+﻿using AstroCalculation.Entities;
+using AstroCalculation.Enums;
 using AstroTBotService.Db.Entities;
 using AstroTBotService.Entities;
-using AstroTBotService.Enums;
 using System.Globalization;
 using System.Text;
 using Telegram.Bot;

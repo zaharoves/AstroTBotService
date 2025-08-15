@@ -1,7 +1,7 @@
-﻿using AstroTBotService.Enums;
+﻿using AstroCalculation.Enums;
 using System.Collections.ObjectModel;
 
-namespace AstroTBotService.AstroCalculation.Entities
+namespace AstroCalculation.Entities
 {
     public class AspectOrbDictionary : ReadOnlyDictionary<AspectEnum, (double Min, double Max)>
     {

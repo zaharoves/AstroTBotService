@@ -1,9 +1,10 @@
-﻿using AstroTBotService.AstroCalculation.Entities;
-using AstroTBotService.Configurations;
-using AstroTBotService.Enums;
+﻿using AstroCalculation.Configurations;
+using AstroCalculation.Entities;
+using AstroCalculation.Enums;
+using AstroCalculation.Interfaces;
 using Microsoft.Extensions.Options;
 
-namespace AstroTBotService.Common
+namespace AstroCalculation
 {
     public class CommonHelper : ICommonHelper
     {
@@ -12,7 +13,7 @@ namespace AstroTBotService.Common
         private readonly Dictionary<PlanetEnum, AspectOrbDictionary> _directionOrbs;
 
         public CommonHelper(
-            IOptions<AstroConfig> astroConfiguration)
+            IOptions<AstroCalculationConfig> astroConfiguration)
         {
             _natalOrbs = new Dictionary<PlanetEnum, AspectOrbDictionary>()
             {

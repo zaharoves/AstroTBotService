@@ -1,7 +1,7 @@
-﻿using AstroTBotService.AstroCalculation.Entities;
-using AstroTBotService.Enums;
+﻿using AstroCalculation.Entities;
+using AstroCalculation.Enums;
 
-namespace AstroTBotService.Common
+namespace AstroCalculation.Interfaces
 {
     public interface ICommonHelper
     {

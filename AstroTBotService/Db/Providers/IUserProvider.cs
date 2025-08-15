@@ -1,7 +1,7 @@
-﻿using AstroTBotService.Db.Entities;
+﻿using AstroCalculation.Enums;
+using AstroTBotService.Db.Entities;
 using AstroTBotService.Entities;
 using AstroTBotService.Enums;
-using System;
 
 namespace AstroTBotService.Db.Providers
 {

@@ -1,7 +1,7 @@
 ﻿
-namespace AstroTBotService.Configurations
+namespace AstroCalculation.Configurations
 {
-    public class AstroConfig
+    public class AstroCalculationConfig
     {
         public const string ConfigKey = "Astro";
 

@@ -1,23 +1,20 @@
-﻿using AstroTBotService.AstroCalculation.Entities;
-using AstroTBotService.Common;
-using AstroTBotService.Enums;
+﻿using AstroCalculation.Entities;
+using AstroCalculation.Enums;
+using AstroCalculation.Interfaces;
 
-namespace AstroTBotService.AstroCalculation.Services
+namespace AstroCalculation
 {
-    public class CalculationService : ICalculationService
+    public class AstroCalculationService : IAstroCalculationService
     {
         private readonly ICommonHelper _commonHelper;
         private readonly ISwissEphemerisService _swissEphemerisService;
-        private readonly ILogger<CalculationService> _logger;
 
-        public CalculationService(
+        public AstroCalculationService(
             ICommonHelper commonHelper,
-            ISwissEphemerisService swissEphemerisService,
-            ILogger<CalculationService> logger)
+            ISwissEphemerisService swissEphemerisService)
         {
             _commonHelper = commonHelper;
             _swissEphemerisService = swissEphemerisService;
-            _logger = logger;
         }
 
         public async Task<ChartInfo> GetChartInfo(DateTime dateTime, TimeSpan timeZoneOffset, double longitude, double latitude, HouseSystemEnum houseSystem)
@@ -101,7 +98,7 @@ namespace AstroTBotService.AstroCalculation.Services
 
             if (timeSpan < TimeSpan.Zero)
             {
-                _logger.LogError($"Get direction chart error. Process datetime ({processDateTime}) less than birth date ({birthDate}).");
+                //TODO
                 return null;
             }
 

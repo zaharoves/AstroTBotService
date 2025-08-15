@@ -1,9 +1,9 @@
-﻿using AstroTBotService.AstroCalculation.Entities;
-using AstroTBotService.Enums;
+﻿using AstroCalculation.Entities;
+using AstroCalculation.Enums;
 
-namespace AstroTBotService.AstroCalculation.Services
+namespace AstroCalculation.Interfaces
 {
-    public interface ICalculationService
+    public interface IAstroCalculationService
     {
         Task<ChartInfo> GetChartInfo(DateTime dateTime, TimeSpan timeZoneOffset, double logitude, double latitude, HouseSystemEnum houseSystem);
 

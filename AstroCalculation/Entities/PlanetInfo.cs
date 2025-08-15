@@ -1,6 +1,6 @@
-﻿using AstroTBotService.Enums;
+﻿using AstroCalculation.Enums;
 
-namespace AstroTBotService.AstroCalculation.Entities
+namespace AstroCalculation.Entities
 {
     public class PlanetInfo : PositionInfo
     {

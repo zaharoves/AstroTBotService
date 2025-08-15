@@ -36,4 +36,8 @@
     <Folder Include="Migrations\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AstroCalculation\AstroCalculation.csproj" />
+  </ItemGroup>
+
 </Project>

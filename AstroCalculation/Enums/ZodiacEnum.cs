@@ -1,4 +1,4 @@
-﻿namespace AstroTBotService.Enums
+﻿namespace AstroCalculation.Enums
 {
     public enum ZodiacEnum
     {

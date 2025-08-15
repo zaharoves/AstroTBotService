@@ -1,5 +1,5 @@
 ﻿
-namespace AstroTBotService.Configurations
+namespace AstroCalculation.Configurations
 {
     public class Orbs
     {

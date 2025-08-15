@@ -1,4 +1,5 @@
-﻿using AstroTBotService.Enums;
+﻿using AstroCalculation.Enums;
+using AstroTBotService.Enums;
 
 namespace AstroTBotService
 {

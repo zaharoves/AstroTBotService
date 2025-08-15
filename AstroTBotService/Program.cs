@@ -1,4 +1,3 @@
-using AstroTBotService.AstroCalculation.Services;
 using AstroTBotService.Configurations;
 using AstroTBotService.Db;
 using AstroTBotService.Db.Providers;
@@ -8,12 +7,12 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Serilog;
 using Serilog.Debugging;
-using AstroTBotService.Common;
 using Serilog.Sinks.PostgreSQL;
 using NpgsqlTypes;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using AstroTBotService.Redis;
+using AstroCalculation.Configurations;
 
 namespace AstroTBotService
 {
@@ -32,7 +31,7 @@ namespace AstroTBotService
             {
                 services.Configure<TelegramBotConfig>(hostContext.Configuration.GetSection(TelegramBotConfig.ConfigKey));
                 services.Configure<PostgresConfig>(hostContext.Configuration.GetSection(PostgresConfig.ConfigKey));
-                services.Configure<AstroConfig>(hostContext.Configuration.GetSection(AstroConfig.ConfigKey));
+                services.Configure<AstroCalculationConfig>(hostContext.Configuration.GetSection(AstroCalculationConfig.ConfigKey));
                 services.Configure<SerilogConfig>(hostContext.Configuration.GetSection(SerilogConfig.ConfigKey));
                 services.Configure<RedisConfig>(hostContext.Configuration.GetSection(RedisConfig.ConfigKey));
 
@@ -48,12 +47,17 @@ namespace AstroTBotService
 
                 services.AddSingleton(provider => _telegramBotClient);
                 services.AddSingleton<IResourcesLocaleManager, ResourcesLocaleManager>();
-                services.AddSingleton<ICommonHelper, CommonHelper>();
 
-                services.AddScoped<ICalculationService, CalculationService>();
+                var astroConfig = hostContext.Configuration.GetSection(AstroCalculationConfig.ConfigKey).Get<AstroCalculationConfig>();
+
+                if (astroConfig == null)
+                {
+                    astroConfig = new AstroCalculationConfig();
+                }
+
+                services.AddAstroCalculation(config => config = astroConfig);
+
                 services.AddScoped<IUserProvider, UserProvider>();
-                services.AddScoped<IEphemerisProvider, EphemerisProvider>();
-                services.AddScoped<ISwissEphemerisService, SwissEphemerisService>();
 
                 services.AddScoped<ITClientHelper, TClientHelper>();
                 services.AddScoped<IUpdateHandler, TBotUpdateHandler>();
@@ -148,49 +152,49 @@ namespace AstroTBotService
             }
         }
 
-        public static async Task Test(IHost host)
-        {
-            //test
-            var year = 2020;
-            var month = 5;
-            var month1 = 4;
+        //public static async Task Test(IHost host)
+        //{
+        //    //test
+        //    var year = 2020;
+        //    var month = 5;
+        //    var month1 = 4;
 
 
-            var a = host.Services.GetRequiredService<ISwissEphemerisService>();
-            var b0 = a.GetDataTest(new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc));
-            await Console.Out.WriteLineAsync(b0.Info[0].ToString());
+        //    var a = host.Services.GetRequiredService<ISwissEphemerisService>();
+        //    var b0 = a.GetDataTest(new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc));
+        //    await Console.Out.WriteLineAsync(b0.Info[0].ToString());
 
-            var b1 = a.GetDataTest(new DateTime(year, month1, 30, 23, 0, 0, DateTimeKind.Utc));
-            await Console.Out.WriteLineAsync(b1.Info[0].ToString());
+        //    var b1 = a.GetDataTest(new DateTime(year, month1, 30, 23, 0, 0, DateTimeKind.Utc));
+        //    await Console.Out.WriteLineAsync(b1.Info[0].ToString());
 
-            var b2 = a.GetDataTest(new DateTime(year, month, 1, 1, 0, 0, DateTimeKind.Utc));
-            await Console.Out.WriteLineAsync(b2.Info[0].ToString());
+        //    var b2 = a.GetDataTest(new DateTime(year, month, 1, 1, 0, 0, DateTimeKind.Utc));
+        //    await Console.Out.WriteLineAsync(b2.Info[0].ToString());
 
-            var b3 = a.GetDataTest(new DateTime(1995, 2, 15, 5, 27, 0, DateTimeKind.Utc));
-            await Console.Out.WriteLineAsync(b3.Info[0].ToString());
+        //    var b3 = a.GetDataTest(new DateTime(1995, 2, 15, 5, 27, 0, DateTimeKind.Utc));
+        //    await Console.Out.WriteLineAsync(b3.Info[0].ToString());
 
-            //var b2 = a.GetDataTest(new DateTime(year, month1, 30, 23, 0, 0, DateTimeKind.Utc));
-            //await Console.Out.WriteLineAsync(b2.Info[0].ToString());
+        //    //var b2 = a.GetDataTest(new DateTime(year, month1, 30, 23, 0, 0, DateTimeKind.Utc));
+        //    //await Console.Out.WriteLineAsync(b2.Info[0].ToString());
 
-            //var b21 = a.GetDataTest(new DateTime(year, month1, 30, 23, 20, 0, DateTimeKind.Utc));
-            //await Console.Out.WriteLineAsync(b21.Info[0].ToString());
+        //    //var b21 = a.GetDataTest(new DateTime(year, month1, 30, 23, 20, 0, DateTimeKind.Utc));
+        //    //await Console.Out.WriteLineAsync(b21.Info[0].ToString());
 
-            //var b3 = a.GetDataTest(new DateTime(year, month1, 30, 23, 30, 0, DateTimeKind.Utc));
-            //await Console.Out.WriteLineAsync(b3.Info[0].ToString());
+        //    //var b3 = a.GetDataTest(new DateTime(year, month1, 30, 23, 30, 0, DateTimeKind.Utc));
+        //    //await Console.Out.WriteLineAsync(b3.Info[0].ToString());
 
-            //var b4 = a.GetDataTest(new DateTime(year, month1, 30, 23, 40, 0, DateTimeKind.Utc));
-            //await Console.Out.WriteLineAsync(b4.Info[0].ToString());
+        //    //var b4 = a.GetDataTest(new DateTime(year, month1, 30, 23, 40, 0, DateTimeKind.Utc));
+        //    //await Console.Out.WriteLineAsync(b4.Info[0].ToString());
 
-            //var b5 = a.GetDataTest(new DateTime(year, month1, 30, 23, 50, 0, DateTimeKind.Utc));
-            //await Console.Out.WriteLineAsync(b5.Info[0].ToString());
+        //    //var b5 = a.GetDataTest(new DateTime(year, month1, 30, 23, 50, 0, DateTimeKind.Utc));
+        //    //await Console.Out.WriteLineAsync(b5.Info[0].ToString());
 
-            //var b6 = a.GetDataTest(new DateTime(year, month1, 30, 23, 55, 0, DateTimeKind.Utc));
-            //await Console.Out.WriteLineAsync(b6.Info[0].ToString());
+        //    //var b6 = a.GetDataTest(new DateTime(year, month1, 30, 23, 55, 0, DateTimeKind.Utc));
+        //    //await Console.Out.WriteLineAsync(b6.Info[0].ToString());
 
-            //var b7 = a.GetDataTest(new DateTime(year, month1, 30, 23, 59, 0, DateTimeKind.Utc));
-            //await Console.Out.WriteLineAsync(b7.Info[0].ToString());
+        //    //var b7 = a.GetDataTest(new DateTime(year, month1, 30, 23, 59, 0, DateTimeKind.Utc));
+        //    //await Console.Out.WriteLineAsync(b7.Info[0].ToString());
 
-            //test
-        }
+        //    //test
+        //}
     }
 }

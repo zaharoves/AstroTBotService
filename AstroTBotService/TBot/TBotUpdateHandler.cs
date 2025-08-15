@@ -6,9 +6,10 @@ using AstroTBotService.Enums;
 using AstroTBotService.Entities;
 using AstroTBotService.Db.Providers;
 using AstroTBotService.Db.Entities;
-using AstroTBotService.AstroCalculation.Services;
 using Telegram.Bot.Types.ReplyMarkups;
 using AstroTBotService.Redis;
+using AstroCalculation.Enums;
+using AstroCalculation.Interfaces;
 
 namespace AstroTBotService.TBot
 {
@@ -17,7 +18,7 @@ namespace AstroTBotService.TBot
         ITClientHelper clientHelper,
         IPersonDataPicker personDataPicker,
         IUserProvider userProvider,
-        ICalculationService calculationService,
+        IAstroCalculationService calculationService,
         IResourcesLocaleManager localeManager,
         IRedisService redisService,
         ILogger<TBotUpdateHandler> logger) : IUpdateHandler
@@ -28,7 +29,7 @@ namespace AstroTBotService.TBot
         private readonly IUserProvider _userProvider = userProvider;
         private readonly IResourcesLocaleManager _localeManager = localeManager;
         private readonly IRedisService _redisService = redisService;
-        private readonly ICalculationService _calculationService = calculationService;
+        private readonly IAstroCalculationService _calculationService = calculationService;
         private readonly ILogger<TBotUpdateHandler> _logger = logger;
 
         public TBotClientData ClientData { get; private set; }

@@ -1,6 +1,6 @@
-﻿using AstroTBotService.Enums;
+﻿using AstroCalculation.Enums;
 
-namespace AstroTBotService.AstroCalculation.Entities
+namespace AstroCalculation.Entities
 {
     public class AspectInfo
     {
@@ -13,7 +13,6 @@ namespace AstroTBotService.AstroCalculation.Entities
         public DateTime StartDate{ get; set; }
 
         public DateTime EndDate { get; set; }
-
 
         public AspectInfo(PlanetInfo natalPlanet, PlanetInfo transitPlanet, AspectEnum aspect)
         {

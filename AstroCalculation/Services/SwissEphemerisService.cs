@@ -1,13 +1,12 @@
-﻿using AstroTBotService.AstroCalculation.Entities;
-using AstroTBotService.Configurations;
-using AstroTBotService.Db.Entities;
-using AstroTBotService.Db.Providers;
-using AstroTBotService.Enums;
-using AstroTBotService.TBot;
-using Microsoft.Extensions.Options;
+﻿using AstroCalculation.Entities;
+using AstroCalculation.Enums;
+using AstroCalculation.Constants;
+using AstroCalculation.Interfaces;
 using SwissEphNet;
+using AstroCalculation.Configurations;
+using Microsoft.Extensions.Options;
 
-namespace AstroTBotService.AstroCalculation.Services
+namespace AstroCalculation
 {
     public class SwissEphemerisService : ISwissEphemerisService
     {
@@ -19,24 +18,18 @@ namespace AstroTBotService.AstroCalculation.Services
 
         private SwissEph _swissEphemeris = new SwissEph();
 
-        private readonly IEphemerisProvider _ephemerisProvider;
-        private readonly ILogger<TBotUpdateHandler> _logger;
-        private readonly IOptions<AstroConfig> _configuration;
+        private readonly IOptions<AstroCalculationConfig> _configuration;
 
         public SwissEphemerisService(
-            IEphemerisProvider ephemerisProvider,
-            IOptions<AstroConfig> configuration,
-            ILogger<TBotUpdateHandler> logger)
+            IOptions<AstroCalculationConfig> configuration)
         {
             _configuration = configuration;
-            _logger = logger;
 
             try
             {
                 if (string.IsNullOrWhiteSpace(_configuration.Value.SwissEphPath))
                 {
-                    _logger.LogWarning("Swiss eph path is null.");
-
+                    //TODO
                 }
                 else
                 {
@@ -47,10 +40,8 @@ namespace AstroTBotService.AstroCalculation.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Set ephemeris path error.");
+                //TODO
             }
-
-            _ephemerisProvider = ephemerisProvider;
         }
 
         public async Task<ChartInfo> GetChart(DateTime dateTime, double logitude, double latitude, HouseSystemEnum houseSystem)
@@ -85,12 +76,12 @@ namespace AstroTBotService.AstroCalculation.Services
                 //Error code
                 if (resultCode == -1)
                 {
-                    _logger.LogError("Get swe houses error: external calculating error.");
+                    //TODO
                 }
                 //Warning codes
                 else if (resultCode > 0)
                 {
-                    _logger.LogError($"Get swe houses warning. Warning code: {resultCode}.");
+                    //TODO
                 }
 
                 //Fill houses info
@@ -130,50 +121,50 @@ namespace AstroTBotService.AstroCalculation.Services
             return planetInfo;
         }
 
-        public async Task FillEphemeris(DateTime startDate, DateTime endDate, TimeSpan interval, double logitude, double latitude, HouseSystemEnum houseSystem)
-        {
-            var saveDbTimeSpan = new TimeSpan(1, 0, 0, 0);
+        //public async Task FillEphemeris(DateTime startDate, DateTime endDate, TimeSpan interval, double logitude, double latitude, HouseSystemEnum houseSystem)
+        //{
+        //    var saveDbTimeSpan = new TimeSpan(1, 0, 0, 0);
 
-            var startIntervalDate = startDate;
-            var endIntervalDate = startIntervalDate.Add(saveDbTimeSpan);
+        //    var startIntervalDate = startDate;
+        //    var endIntervalDate = startIntervalDate.Add(saveDbTimeSpan);
 
-            while (startIntervalDate < endDate)
-            {
-                var charts = await GetCharts(startIntervalDate, endIntervalDate, interval, logitude, latitude, houseSystem);
+        //    while (startIntervalDate < endDate)
+        //    {
+        //        var charts = await GetCharts(startIntervalDate, endIntervalDate, interval, logitude, latitude, houseSystem);
 
-                var ephList = new List<Ephemeris>();
+        //        var ephList = new List<Ephemeris>();
 
-                foreach (var chart in charts)
-                {
-                    var ephDb = new Ephemeris()
-                    {
-                        Id = long.Parse($"{chart.DateTime.ToUniversalTime().ToString("yyyyMMddHHmmss")}"),
-                        DateTime = chart.DateTime.ToUniversalTime(),
+        //        foreach (var chart in charts)
+        //        {
+        //            var ephDb = new Ephemeris()
+        //            {
+        //                Id = long.Parse($"{chart.DateTime.ToUniversalTime().ToString("yyyyMMddHHmmss")}"),
+        //                DateTime = chart.DateTime.ToUniversalTime(),
 
-                        SunAngles = chart.ChartInfo.Planets[PlanetEnum.Sun].AbsolutAngles,
-                        MoonAngles = chart.ChartInfo.Planets[PlanetEnum.Moon].AbsolutAngles,
+        //                SunAngles = chart.ChartInfo.Planets[PlanetEnum.Sun].AbsolutAngles,
+        //                MoonAngles = chart.ChartInfo.Planets[PlanetEnum.Moon].AbsolutAngles,
 
-                        MercuryAngles = chart.ChartInfo.Planets[PlanetEnum.Mercury].AbsolutAngles,
-                        VenusAngles = chart.ChartInfo.Planets[PlanetEnum.Venus].AbsolutAngles,
-                        MarsAngles = chart.ChartInfo.Planets[PlanetEnum.Mars].AbsolutAngles,
+        //                MercuryAngles = chart.ChartInfo.Planets[PlanetEnum.Mercury].AbsolutAngles,
+        //                VenusAngles = chart.ChartInfo.Planets[PlanetEnum.Venus].AbsolutAngles,
+        //                MarsAngles = chart.ChartInfo.Planets[PlanetEnum.Mars].AbsolutAngles,
 
-                        JupiterAngles = chart.ChartInfo.Planets[PlanetEnum.Jupiter].AbsolutAngles,
-                        SaturnAngles = chart.ChartInfo.Planets[PlanetEnum.Saturn].AbsolutAngles,
+        //                JupiterAngles = chart.ChartInfo.Planets[PlanetEnum.Jupiter].AbsolutAngles,
+        //                SaturnAngles = chart.ChartInfo.Planets[PlanetEnum.Saturn].AbsolutAngles,
 
-                        UranAngles = chart.ChartInfo.Planets[PlanetEnum.Uran].AbsolutAngles,
-                        NeptuneAngles = chart.ChartInfo.Planets[PlanetEnum.Neptune].AbsolutAngles,
-                        PlutoAngles = chart.ChartInfo.Planets[PlanetEnum.Pluto].AbsolutAngles
-                    };
+        //                UranAngles = chart.ChartInfo.Planets[PlanetEnum.Uran].AbsolutAngles,
+        //                NeptuneAngles = chart.ChartInfo.Planets[PlanetEnum.Neptune].AbsolutAngles,
+        //                PlutoAngles = chart.ChartInfo.Planets[PlanetEnum.Pluto].AbsolutAngles
+        //            };
 
-                    ephList.Add(ephDb);
-                }
+        //            ephList.Add(ephDb);
+        //        }
 
-                await _ephemerisProvider.AddEphemerises(ephList);
+        //        await _ephemerisProvider.AddEphemerises(ephList);
 
-                startIntervalDate = startIntervalDate.Add(saveDbTimeSpan);
-                endIntervalDate = endIntervalDate.Add(saveDbTimeSpan);
-            }
-        }
+        //        startIntervalDate = startIntervalDate.Add(saveDbTimeSpan);
+        //        endIntervalDate = endIntervalDate.Add(saveDbTimeSpan);
+        //    }
+        //}
 
         private PlanetInfo GetPlanetInfo(PlanetEnum planetEnum, double day, int iflag)
         {
@@ -184,7 +175,7 @@ namespace AstroTBotService.AstroCalculation.Services
 
             if (result != SwissEph.OK || !string.IsNullOrEmpty(error))
             {
-                _logger.LogWarning($"Get planet info error. Planet: {planetEnum}. Julday: {day}. Result: {result}. Error: {error}.");
+                //TODO
             }
 
             var planetInfo = new PlanetInfo(planetEnum, info[0], info[3]);
@@ -242,7 +233,7 @@ namespace AstroTBotService.AstroCalculation.Services
                 case PlanetEnum.Pluto:
                     return SwissEph.SE_PLUTO;
                 default:
-                    _logger.LogError($"Can't find planet: {planetEnum}. Set default value: -1.");
+                    //TODO
                     return -1;
             }
         }
@@ -258,7 +249,7 @@ namespace AstroTBotService.AstroCalculation.Services
                 case HouseSystemEnum.Koch:
                     return 'K';
                 default:
-                    _logger.LogError($"Can't find house system: {houseSystem}. Set default house system: {HouseSystemEnum.Placidus}.");
+                    //TODO
                     return 'P';
             }
         }
@@ -285,7 +276,7 @@ namespace AstroTBotService.AstroCalculation.Services
 
             foreach (var zodiacEnum in Enum.GetValues(typeof(ZodiacEnum)).Cast<ZodiacEnum>())
             {
-                var planetRuler = Constants.HOUSES_RULER_DICT[zodiacEnum];
+                var planetRuler = Astro.HOUSES_RULER_DICT[zodiacEnum];
 
                 var rulerHouses = new List<HouseEnum>();
 
@@ -310,7 +301,7 @@ namespace AstroTBotService.AstroCalculation.Services
 
             foreach (var unknownZodiac in unknownZodiacList)
             {
-                var planetRuler = Constants.HOUSES_RULER_DICT[unknownZodiac];
+                var planetRuler = Astro.HOUSES_RULER_DICT[unknownZodiac];
                 chartInfo.Planets[planetRuler].RulerHouses.Add(prevHouse);
             }
         }

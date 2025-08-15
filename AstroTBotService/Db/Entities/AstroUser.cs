@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
-using AstroTBotService.Enums;
+using AstroCalculation.Enums;
 
 namespace AstroTBotService.Db.Entities
 {
