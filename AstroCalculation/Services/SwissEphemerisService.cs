@@ -44,17 +44,17 @@ namespace AstroCalculation
             }
         }
 
-        public async Task<ChartInfo> GetChart(DateTime dateTime, double logitude, double latitude, HouseSystemEnum houseSystem)
+        public async Task<ChartInfo> GetChart(DateTimeOffset dateTimeOffset, double logitude, double latitude, HouseSystemEnum houseSystem)
         {
-            var chart = new ChartInfo(dateTime);
+            var chart = new ChartInfo(dateTimeOffset);
 
             // Convert date to Julian date
-            double minutePart = (dateTime.Minute / 60.0);
-            double secondPart = (dateTime.Second / 3600.0);
+            double minutePart = (dateTimeOffset.Minute / 60.0);
+            double secondPart = (dateTimeOffset.Second / 3600.0);
 
             var chartTask = await Task.Run(() =>
             {
-                double day = _swissEphemeris.swe_julday(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour + minutePart + secondPart, _swissCalendarType);
+                double day = _swissEphemeris.swe_julday(dateTimeOffset.Year, dateTimeOffset.Month, dateTimeOffset.Day, dateTimeOffset.Hour + minutePart + secondPart, _swissCalendarType);
 
                 //Fill planets info
                 foreach (var planetEnum in Enum.GetValues(typeof(PlanetEnum)).Cast<PlanetEnum>())
@@ -121,6 +121,7 @@ namespace AstroCalculation
             return planetInfo;
         }
 
+        // TODO
         //public async Task FillEphemeris(DateTime startDate, DateTime endDate, TimeSpan interval, double logitude, double latitude, HouseSystemEnum houseSystem)
         //{
         //    var saveDbTimeSpan = new TimeSpan(1, 0, 0, 0);
@@ -306,6 +307,7 @@ namespace AstroCalculation
             }
         }
 
+        // TODO Delete
         public (double[] Info, int Result) GetDataTest(DateTime dateTime)
         {
             //_swissEphemeris.Hou

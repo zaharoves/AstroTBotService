@@ -17,29 +17,23 @@ namespace AstroTBotService.Entities
         public int Hour { get; set; }
         public int Minute { get; set; }
 
-        public double? Longitude { get; set; }
-        public double? Latitude { get; set; }
+        public double Longitude { get; set; }
+        public double Latitude { get; set; }
 
-        public double? TimeZoneMilliseconds { get; set; }
+        public string? TimeZone { get; set; }
 
-        public DateTime GetDateTime()
+        public string? DateTimeOffsetString { get; set; }
+
+        public DateTimeOffset GetDateTimeOffset()
         {
-            var year = Year <= 0 ? 1 : Year;
-            var month = Month <= 0 ? 1 : Month;
-            var day = Day <= 0 ? 1 : Day;
-
-            return new DateTime(year, month, day, Hour, Minute, 0, DateTimeKind.Utc);
-        }
-
-        public TimeSpan GetTimeZone()
-        {
-            if (TimeZoneMilliseconds.HasValue)
+            if (!string.IsNullOrWhiteSpace(DateTimeOffsetString)
+                    && DateTimeOffset.TryParse(DateTimeOffsetString, out var dateTimeOffset))
             {
-                return TimeSpan.FromMilliseconds(TimeZoneMilliseconds.Value);
+                return dateTimeOffset;
             }
             else
             {
-                return TimeSpan.Zero;
+                return DateTimeOffset.MinValue;
             }
         }
     }

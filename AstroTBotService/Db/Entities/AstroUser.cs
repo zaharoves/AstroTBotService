@@ -22,8 +22,33 @@ namespace AstroTBotService.Db.Entities
 
         public bool IsUser => true;
 
-        public DateTime? BirthDate { get; set ; }
+        public DateTime? UtcBirthDate { get; set; }
         public TimeSpan? TimeZoneOffset { get; set; }
+
+        [NotMapped]
+        public DateTimeOffset LocalDateTimeOffset
+        {
+            get
+            {
+                if (UtcBirthDate.HasValue && TimeZoneOffset.HasValue)
+                {
+                    var dateTime = new DateTime(
+                        UtcBirthDate.Value.Year,
+                        UtcBirthDate.Value.Month,
+                        UtcBirthDate.Value.Day,
+                        UtcBirthDate.Value.Hour,
+                        UtcBirthDate.Value.Minute,
+                        0,
+                        DateTimeKind.Unspecified);
+
+                    return new DateTimeOffset(dateTime, TimeZoneOffset.Value);
+
+                }
+
+                return new DateTimeOffset(DateTime.MinValue, TimeSpan.MinValue);
+            }
+        }
+
 
         public double? Longitude { get; set; }
         public double? Latitude { get; set; }
@@ -50,7 +75,7 @@ namespace AstroTBotService.Db.Entities
         {
             var persons = GetAllPersons();
 
-            //TODO
+            // TODO
             return persons.FirstOrDefault(p => p.IsChosen == true);
         }
 
@@ -65,37 +90,37 @@ namespace AstroTBotService.Db.Entities
             return DateToString("d.MM.yyyy ", cultureInfo);
         }
 
+        // TODO replace?
         private string DateToString(string dateFormat, CultureInfo cultureInfo)
         {
-            if (!BirthDate.HasValue)
+            if (!UtcBirthDate.HasValue || !TimeZoneOffset.HasValue)
             {
                 return string.Empty;
             }
 
+            var dateTimeOffset = LocalDateTimeOffset;
+
             var timeZoneString = string.Empty;
 
-            if (TimeZoneOffset.HasValue)
+            var timeZoneSign = dateTimeOffset.Offset >= TimeSpan.Zero ? "+" : "-";
+
+            var hoursStr = Math.Abs(dateTimeOffset.Offset.Hours).ToString();
+
+            if (dateTimeOffset.Offset.Minutes == 0)
             {
-                var timeZoneSign = TimeZoneOffset.Value >= TimeSpan.Zero ? "+" : "-";
+                timeZoneString = $"{timeZoneSign}{hoursStr}";
+            }
+            else
+            {
+                var minutesStr = Math.Abs(dateTimeOffset.Offset.Minutes).ToString();
+                var timeZoneMinutes = minutesStr.Length == 1 ? $"0{minutesStr}" : minutesStr;
 
-                var hoursStr = Math.Abs(TimeZoneOffset.Value.Hours).ToString();
-
-                if (TimeZoneOffset.Value.Minutes == 0)
-                {
-                    timeZoneString = $"{timeZoneSign}{hoursStr}";
-                }
-                else
-                {
-                    var minutesStr = Math.Abs(TimeZoneOffset.Value.Minutes).ToString();
-                    var timeZoneMinutes = minutesStr.Length == 1 ? $"0{minutesStr}" : minutesStr;
-
-                    timeZoneString = $"{timeZoneSign}{hoursStr}:{timeZoneMinutes}";
-                }
+                timeZoneString = $"{timeZoneSign}{hoursStr}:{timeZoneMinutes}";
             }
 
-            return $"{BirthDate.Value.ToString(dateFormat +
+            return $"{dateTimeOffset.DateTime.ToString(dateFormat +
                 $"{Constants.UI.Icons.Common.MINUS}  " +
-                "HH:mm", cultureInfo)} [GMT{timeZoneString}]";
+                "HH:mm", cultureInfo)} [UTC{timeZoneString}]";
         }
     }
 }

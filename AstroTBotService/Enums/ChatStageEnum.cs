@@ -5,7 +5,7 @@
         Menu,
         Persons,
 
-        PersonNamePicker,
+        NamePicker,
 
         YearIntervalPicker,
         YearPicker,
@@ -15,8 +15,7 @@
         HourPicker,
         MinutePicker,
 
-        TimeZonePicker,
-        BirthLocationPicker,
+        LocationPicker,
         ConfirmBirthday,
 
         LanguagePicker,

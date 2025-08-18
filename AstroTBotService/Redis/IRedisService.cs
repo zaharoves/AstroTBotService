@@ -1,5 +1,4 @@
 ﻿using AstroTBotService.Entities;
-using System.Threading.Tasks;
 
 namespace AstroTBotService.Redis
 {
@@ -30,10 +29,12 @@ namespace AstroTBotService.Redis
         Task<bool> SetPersonHour(long mainUserId, int hour);
         Task<bool> SetPersonMinute(long mainUserId, int minute);
 
-        Task<bool> SetPersonTimeZone(long mainUserId, TimeSpan timeSpan);
-
         Task<bool> SetPersonLongitude(long mainUserId, double longitude);
         Task<bool> SetPersonLatitude(long mainUserId, double latitude);
+
+        Task<bool> SetPersonTimeZone(long mainUserId, TimeZoneInfo timeZoneInfo);
+
+        Task<string> SetPersonDateTimeOffsetStr(long mainUserId, DateTimeOffset dateTimeOffset);
 
         Task<bool> SetEditingPersonId(long mainUserId, long personId);
         Task<bool> SetEditingUserId(long mainUserId);

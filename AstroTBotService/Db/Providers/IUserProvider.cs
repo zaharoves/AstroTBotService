@@ -10,6 +10,7 @@ namespace AstroTBotService.Db.Providers
         Task<AstroUser?> GetUser(long userId);
         Task AddUser(AstroUser user);
         Task EditUser(long userId, RedisPersonData personData);
+
         Task DeleteUser(AstroUser user);
 
         Task<IList<AstroPerson>?> GetUsersPersons(long userId);
@@ -19,7 +20,7 @@ namespace AstroTBotService.Db.Providers
 
         Task EditLanguage(long userId, string? language);
         Task EditHouseSystem(long userId, HouseSystemEnum houseSystem);
-        Task UpdateUserName(long userId, string userName);
+        Task EditUserName(long userId, string userName);
 
         Task<bool> IsNewUser(long userId);
 

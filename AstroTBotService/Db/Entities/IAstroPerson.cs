@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.Globalization;
 
 namespace AstroTBotService.Db.Entities
 {
@@ -6,9 +7,11 @@ namespace AstroTBotService.Db.Entities
     {
         long? Id { get; set; }
 
-        DateTime? BirthDate { get; set; }
+        DateTime? UtcBirthDate { get; set; }
 
         TimeSpan? TimeZoneOffset { get; set; }
+
+        DateTimeOffset LocalDateTimeOffset { get; }
 
         double? Longitude { get; set; }
         double? Latitude { get; set; }

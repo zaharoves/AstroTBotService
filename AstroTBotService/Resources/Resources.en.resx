@@ -5642,4 +5642,13 @@ After selecting it, click "Send location".</value>
   <data name="PleaseWait" xml:space="preserve">
     <value>Please, wait...</value>
   </data>
+  <data name="LocalTime" xml:space="preserve">
+    <value>Local time</value>
+  </data>
+  <data name="NewData" xml:space="preserve">
+    <value>New data</value>
+  </data>
+  <data name="OldData" xml:space="preserve">
+    <value>Old data</value>
+  </data>
 </root>

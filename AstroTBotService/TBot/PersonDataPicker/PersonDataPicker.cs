@@ -24,6 +24,75 @@ namespace AstroTBotService.TBot
             _localeManager = localeManager;
         }
 
+        public async Task SendNamePicker(TBotClientData clientData, string text)
+        {
+            var keyboard = new InlineKeyboardMarkup(new[]
+            {
+                new []
+                {
+                    _clientHelper.GetBackToPersonsButton(clientData),
+                    _clientHelper.GetCancelButtonWithEdit(clientData)
+                }
+            });
+
+            await _clientHelper.SendMessage(
+                clientData.AstroUserId,
+                $"{text}\n\n" +
+                $"{Constants.UI.Icons.Common.MOON_1} {_localeManager.GetString("EnterPersonName", clientData.AstroUser.CultureInfo)}:",
+                keyboard);
+        }
+
+        public async Task EditToNamePicker(TBotClientData clientData, string text)
+        {
+            var keyboard = new InlineKeyboardMarkup(new[]
+            {
+                new []
+                {
+                    _clientHelper.GetCancelButtonWithEdit(clientData)
+                }
+            });
+
+            await _clientHelper.EditMessage(
+                clientData.AstroUserId,
+                clientData.Message.Id,
+                $"{text}\n\n" +
+                $"{Constants.UI.Icons.Common.MOON_1} {_localeManager.GetString("EnterPersonName", clientData.AstroUser.CultureInfo)}:",
+                keyboard);
+        }
+
+        public async Task SendLocationPicker(TBotClientData clientData, string text)
+        {
+            var keyboard = new InlineKeyboardMarkup(new[]
+            {
+                new []
+                {
+                    _clientHelper.GetCancelButtonWithEdit(clientData)
+                }
+            });
+
+            await _botClient.SendMessage(
+                chatId: clientData.AstroUserId,
+                text: text,
+                replyMarkup: keyboard);
+        }
+
+        public async Task EditToLocationPicker(TBotClientData clientData, string text)
+        {
+            var keyboard = new InlineKeyboardMarkup(new[]
+            {
+                new []
+                {
+                    _clientHelper.GetCancelButtonWithEdit(clientData)
+                }
+            });
+
+            await _botClient.EditMessageText(
+                chatId: clientData.AstroUserId,
+                messageId: clientData.Message.Id,
+                text: text,
+                replyMarkup: keyboard);
+        }
+
         public async Task EditToYearIntervalPicker(TBotClientData clientData, string text)
         {
             var keyboard = GetYearIntervalKeyboard(clientData);
@@ -113,7 +182,7 @@ namespace AstroTBotService.TBot
 
         public async Task SendConfirmDate(TBotClientData clientData, string text)
         {
-            var inlineKeyboard = new InlineKeyboardMarkup(new[]
+            var keyboard = new InlineKeyboardMarkup(new[]
             {
                 new []
                 {
@@ -134,7 +203,34 @@ namespace AstroTBotService.TBot
             await _botClient.SendMessage(
                 chatId: clientData.AstroUserId,
                 text: text,
-                replyMarkup: inlineKeyboard);
+                replyMarkup: keyboard);
+        }
+
+        public async Task EditToConfirmDate(TBotClientData clientData, string text)
+        {
+            var keyboard = new InlineKeyboardMarkup(new[]
+            {
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        $"{_resourcesLocaleManager.GetString("Save", clientData.AstroUser.CultureInfo)} {Constants.UI.Icons.Common.GREEN_CIRCLE}",
+                        $"{Constants.UI.Buttons.Commands.SAVE_BIRTHDAY}"),
+
+                    InlineKeyboardButton.WithCallbackData(
+                        $"{_resourcesLocaleManager.GetString("Change", clientData.AstroUser.CultureInfo)} {Constants.UI.Icons.Common.YELLOW_CIRCLE}",
+                        $"{Constants.UI.Buttons.Commands.CHANGE_BIRTHDAY}"),
+                },
+                new []
+                {
+                    _clientHelper.GetCancelButtonWithEdit(clientData)
+                }
+            });
+
+            await _botClient.EditMessageText(
+                chatId: clientData.AstroUserId,
+                messageId: clientData.Message.Id,
+                text: text,
+                replyMarkup: keyboard);
         }
 
         private InlineKeyboardMarkup GetYearIntervalKeyboard(TBotClientData clientData)
@@ -249,14 +345,14 @@ namespace AstroTBotService.TBot
 
         private InlineKeyboardMarkup GetDaysKeyboard(TBotClientData clientData)
         {
-            if (clientData.RedisPersonData?.GetDateTime() == null)
+            if (clientData.RedisPersonData?.GetDateTimeOffset() == null)
             {
                 return null;
             }
 
             var dateTimePicker = new List<List<InlineKeyboardButton>>();
 
-            var daysInMonth = DateTime.DaysInMonth(clientData.RedisPersonData.GetDateTime().Year, clientData.RedisPersonData.GetDateTime().Month);
+            var daysInMonth = DateTime.DaysInMonth(clientData.RedisPersonData.GetDateTimeOffset().Year, clientData.RedisPersonData.GetDateTimeOffset().Month);
             var currentDay = 1;
 
             for (var rowNum = 0; rowNum < Constants.UI.DAYS_COLUMNS_COUNT; rowNum++)

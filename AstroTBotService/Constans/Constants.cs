@@ -313,6 +313,18 @@ namespace AstroTBotService
                     public const string MINUTES = "'";
                     public const string SECONDS = "\"";
 
+                    public const string HOUSE = "🏠";
+
+                    /// <summary>
+                    /// Man, black hair, black mustache
+                    /// </summary>
+                    public const string FACE_MAN_1 = "👨🏻‍🦱";
+
+                    /// <summary>
+                    /// woman, red hair
+                    /// </summary>
+                    public const string FACE_WOMAN_1 = "👩🏻‍🦰";
+
                     public const string CHOOSED = "✅";
                     public const string X_RED = "❌";
                     public const string EDIT = "✏️";
@@ -324,7 +336,9 @@ namespace AstroTBotService
                     public const string QUESTION_RED = "❓";
                     public const string QUESTION_WHITE = "❔";
 
-                    public const string INFO = "💡";
+                    public const string LIGHT_BULB = "💡";
+                    public const string INFO = "ℹ️";
+                    public const string SETTING = "⚙️";
                     public const string HOURGLASS = "⏳";
 
                     public const string NEXT = "➡️";
@@ -371,18 +385,6 @@ namespace AstroTBotService
                     public const string CLOCK_8 = "🕞";
                     public const string CLOCK_9 = "🕟";
                     public const string CLOCK_10 = "🕠";
-
-                    public const string HOUSE = "🏠";
-
-                    /// <summary>
-                    /// Man, black hair, black mustache
-                    /// </summary>
-                    public const string FACE_MAN_1 = "👨🏻‍🦱";
-
-                    /// <summary>
-                    /// woman, red hair
-                    /// </summary>
-                    public const string FACE_WOMAN_1 = "👩🏻‍🦰";
                 }
 
                 public static class Flags

@@ -48,8 +48,8 @@ namespace AstroTBotService.Db.Providers
                 return;
             }
 
-            user.BirthDate = personData.GetDateTime();
-            user.TimeZoneOffset = personData.GetTimeZone();
+            user.UtcBirthDate = personData.GetDateTimeOffset().UtcDateTime;
+            user.TimeZoneOffset = personData.GetDateTimeOffset().Offset;
             user.Longitude = personData.Longitude;
             user.Latitude = personData.Latitude;
 
@@ -139,7 +139,7 @@ namespace AstroTBotService.Db.Providers
             await _appContext.SaveChangesAsync();
         }
 
-        public async Task UpdateUserName(long userId, string userName)
+        public async Task EditUserName(long userId, string userName)
         {
             var user = await _appContext.AstroUsers
                 .FirstOrDefaultAsync(p => p.Id == userId);
@@ -161,7 +161,7 @@ namespace AstroTBotService.Db.Providers
             var user = await _appContext.AstroUsers
                 .SingleOrDefaultAsync(p => p.Id == userId);
 
-            return user?.BirthDate == null;
+            return user?.UtcBirthDate == null;
         }
 
         #endregion
@@ -182,11 +182,13 @@ namespace AstroTBotService.Db.Providers
                 return;
             }
 
+            var dateTimeOffset = personData.GetDateTimeOffset();
+
             var astroPerson = new AstroPerson()
             {
                 Name = personData.Name,
-                BirthDate = personData.GetDateTime(),
-                TimeZoneOffset = personData.GetTimeZone(),
+                UtcBirthDate = dateTimeOffset.UtcDateTime,
+                TimeZoneOffset = dateTimeOffset.Offset,
                 ParentUserId = userId,
                 Longitude = personData.Longitude,
                 Latitude = personData.Latitude,
@@ -214,8 +216,8 @@ namespace AstroTBotService.Db.Providers
             }
 
             person.Name = personData.Name;
-            person.BirthDate = personData.GetDateTime();
-            person.TimeZoneOffset = personData.GetTimeZone();
+            person.UtcBirthDate = personData.GetDateTimeOffset().UtcDateTime;
+            person.TimeZoneOffset = personData.GetDateTimeOffset().Offset;
             person.ParentUserId = userId;
             person.Longitude = personData.Longitude;
             person.Latitude = personData.Latitude;

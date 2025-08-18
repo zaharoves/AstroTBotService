@@ -243,17 +243,6 @@ namespace AstroTBotService.Redis
             return true;
         }
 
-        public async Task<bool> SetPersonTimeZone(long mainUserId, TimeSpan timeSpan)
-        {
-            await _database.ExecuteAsync(
-                "JSON.SET",
-                mainUserId,
-                $"$.{nameof(RedisPersonData.TimeZoneMilliseconds)}",
-                timeSpan.TotalMilliseconds);
-
-            return true;
-        }
-
         public async Task<bool> SetPersonLongitude(long mainUserId, double longitude)
         {
             await _database.ExecuteAsync(
@@ -276,9 +265,36 @@ namespace AstroTBotService.Redis
             return true;
         }
 
+        public async Task<bool> SetPersonTimeZone(long mainUserId, TimeZoneInfo timeZone)
+        {
+            await _database.ExecuteAsync(
+                "JSON.SET",
+                mainUserId,
+                $"$.{nameof(RedisPersonData.TimeZone)}",
+                timeZone.ToString());
+
+            return true;
+        }
+
+
+        public async Task<string> SetPersonDateTimeOffsetStr(long mainUserId, DateTimeOffset dateTimeOffset)
+        {
+            var dateTimeOffsetStr = dateTimeOffset.ToString("O");
+
+            var redisDateTimeOffsetStr = $"\"{dateTimeOffsetStr}\"";  
+
+            await _database.ExecuteAsync(
+                "JSON.SET",
+                mainUserId,
+                $"$.{nameof(RedisPersonData.DateTimeOffsetString)}",
+                redisDateTimeOffsetStr);
+
+            return dateTimeOffsetStr;
+        }
+
         public async Task<bool> SetEditingPersonId(long mainUserId, long personId)
         {
-            //TODO MSET
+            // TODO MSET
             await _database.ExecuteAsync(
                 "JSON.SET",
                 mainUserId,
@@ -298,7 +314,7 @@ namespace AstroTBotService.Redis
 
         public async Task<bool> SetEditingUserId(long mainUserId)
         {
-            //TODO MSET
+            // TODO MSET
             await _database.ExecuteAsync(
                 "JSON.SET",
                 mainUserId,

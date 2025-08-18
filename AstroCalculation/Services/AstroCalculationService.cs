@@ -1,6 +1,9 @@
 ﻿using AstroCalculation.Entities;
 using AstroCalculation.Enums;
 using AstroCalculation.Interfaces;
+using System.Runtime.InteropServices;
+using TimeZoneConverter;
+using GeoTimeZone;
 
 namespace AstroCalculation
 {
@@ -17,11 +20,42 @@ namespace AstroCalculation
             _swissEphemerisService = swissEphemerisService;
         }
 
-        public async Task<ChartInfo> GetChartInfo(DateTime dateTime, TimeSpan timeZoneOffset, double longitude, double latitude, HouseSystemEnum houseSystem)
+        public DateTimeOffset GetDateTimeOffset(DateTime dateTime, double longitude, double latitude)
         {
-            var birthDateTime = (dateTime - timeZoneOffset);
+            var timeZoneInfo = GetTimeZone(longitude, latitude);
 
-            return await _swissEphemerisService.GetChart(birthDateTime, longitude, latitude, houseSystem);
+            var offset = timeZoneInfo.GetUtcOffset(dateTime);
+
+            var dateTimeOffset = new DateTimeOffset(dateTime, offset);
+
+            return dateTimeOffset;
+        }
+
+        public TimeZoneInfo GetTimeZone(double longitude, double latitude)
+        {
+            var ianaTimeZoneId = TimeZoneLookup.GetTimeZone(latitude, longitude).Result;
+
+            string systemTimeZoneId;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                systemTimeZoneId = TZConvert.IanaToWindows(ianaTimeZoneId);
+            }
+            else
+            {
+                // For Linux and macOS use IANA-id
+                systemTimeZoneId = ianaTimeZoneId;
+            }
+
+            var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(systemTimeZoneId);
+
+            return timeZoneInfo;
+        }
+
+
+        public async Task<ChartInfo> GetChartInfo(DateTimeOffset dateTimeOffset, double longitude, double latitude, HouseSystemEnum houseSystem)
+        {
+            return await _swissEphemerisService.GetChart(dateTimeOffset, longitude, latitude, houseSystem);
         }
 
         public List<AspectInfo> GetNatalAspects(ChartInfo chartInfo)
@@ -29,11 +63,13 @@ namespace AstroCalculation
             return _commonHelper.GetNatalAspects(chartInfo);
         }
 
-        public async Task<List<AspectInfo>> GetTransitAspects(DateTime birthDate, TimeSpan birthTimeZoneOffset, DateTime processDateTime, TimeSpan interval, double longitude, double latitude, HouseSystemEnum houseSystem)
+        public async Task<List<AspectInfo>> GetTransitAspects(DateTimeOffset dateTimeOffset, DateTime processDateTime, TimeSpan interval, double longitude, double latitude, HouseSystemEnum houseSystem)
         {
-            //planets aspects (without moon)
-            var natalDateTime = (birthDate - birthTimeZoneOffset);
-            var transitDateTime = (processDateTime - birthTimeZoneOffset);
+            // TODO CHeck
+
+            // planets aspects (without moon)
+            var natalDateTime = dateTimeOffset;
+            var transitDateTime = processDateTime;
 
             var natalChart = await _swissEphemerisService.GetChart(natalDateTime, longitude, latitude, houseSystem);
             var transitChart = await _swissEphemerisService.GetChart(transitDateTime, longitude, latitude, houseSystem);
@@ -77,10 +113,11 @@ namespace AstroCalculation
             return resultAspects;
         }
 
-        public async Task<List<AspectInfo>> GetDirectionAspects(DateTime birthDate, TimeSpan birthTimeZoneOffset, DateTime processDateTime, double longitude, double latitude, HouseSystemEnum houseSystem)
+        public async Task<List<AspectInfo>> GetDirectionAspects(DateTimeOffset dateTimeOffset, DateTime processDateTime, double longitude, double latitude, HouseSystemEnum houseSystem)
         {
-            var natalDateTime = (birthDate - birthTimeZoneOffset);
-            var directionDateTime = (processDateTime - birthTimeZoneOffset);
+            // TODO CHeck
+            var natalDateTime = dateTimeOffset;
+            var directionDateTime = processDateTime;
 
             var natalChart = await _swissEphemerisService.GetChart(natalDateTime, longitude, latitude, houseSystem);
             var directionChart = GetDirectionChart(natalChart, natalDateTime, directionDateTime);
@@ -90,16 +127,15 @@ namespace AstroCalculation
             return aspects;
         }
 
-        private ChartInfo GetDirectionChart(ChartInfo natalChart, DateTime birthDate, DateTime processDateTime)
+        private ChartInfo GetDirectionChart(ChartInfo natalChart, DateTimeOffset birthDateOffset, DateTimeOffset processDateTimeOffset)
         {
             var directionChart = (ChartInfo)natalChart.Clone();
-
-            var timeSpan = processDateTime - birthDate;
+            // TODO CHeck
+            var timeSpan = processDateTimeOffset - birthDateOffset;
 
             if (timeSpan < TimeSpan.Zero)
             {
-                //TODO
-                return null;
+                throw new ArgumentException($"Agrument \"{nameof(processDateTimeOffset)}\" less than argument \"{birthDateOffset}\".");
             }
 
             var totalYears = (double)timeSpan.Days / 365 +

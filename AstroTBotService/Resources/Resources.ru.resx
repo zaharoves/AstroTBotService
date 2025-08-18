@@ -5635,4 +5635,13 @@
   <data name="PleaseWait" xml:space="preserve">
     <value>Пожалуйста, подождите...</value>
   </data>
+  <data name="LocalTime" xml:space="preserve">
+    <value>Местное время</value>
+  </data>
+  <data name="NewData" xml:space="preserve">
+    <value>Новые данные</value>
+  </data>
+  <data name="OldData" xml:space="preserve">
+    <value>Старые данные</value>
+  </data>
 </root>

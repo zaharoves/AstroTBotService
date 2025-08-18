@@ -6,11 +6,11 @@ namespace AstroCalculation.Entities
     {
         public Dictionary<PlanetEnum, PlanetInfo> Planets { get; set; }
         public Dictionary<HouseEnum, PositionInfo> Houses { get; set; }
-        public DateTime DateTime { get; set; }
+        public DateTimeOffset DateTimeOffset { get; set; }
 
-        public ChartInfo(DateTime dateTime) : base()
+        public ChartInfo(DateTimeOffset dateTimeOffset) : base()
         {
-            DateTime = dateTime;
+            DateTimeOffset = dateTimeOffset;
 
             Planets = new Dictionary<PlanetEnum, PlanetInfo>();
             Houses = new Dictionary<HouseEnum, PositionInfo>();
@@ -18,7 +18,7 @@ namespace AstroCalculation.Entities
 
         public object Clone()
         {
-            var chart = new ChartInfo(DateTime);
+            var chart = new ChartInfo(DateTimeOffset);
 
             chart.Houses = Houses.ToDictionary(
                 entry => entry.Key,

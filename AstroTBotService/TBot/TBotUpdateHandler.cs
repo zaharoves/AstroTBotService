@@ -54,7 +54,7 @@ namespace AstroTBotService.TBot
                 else if (string.IsNullOrWhiteSpace(userStage.Stage))
                 {
                     _logger.LogWarning($"User stage is null or empty for user {user.Id.Value}. Setting to Menu stage.");
-                    
+
                     await _userProvider.SetUserStage(user.Id.Value, ChatStageEnum.Menu);
                 }
                 else if (!Enum.TryParse(typeof(ChatStageEnum), userStage.Stage, out var userStageObj))
@@ -122,30 +122,34 @@ namespace AstroTBotService.TBot
 
             switch (ClientData.ChatStageEnum)
             {
-                case ChatStageEnum.BirthLocationPicker:
+                case ChatStageEnum.LocationPicker:
                     if ((ClientData.Message.Type == MessageType.Location || ClientData.Message.Type == MessageType.Venue)
                         && ClientData.Message.Location != null)
                     {
                         await _redisService.SetPersonLongitude(ClientData.AstroUserId, ClientData.Message.Location.Longitude);
                         await _redisService.SetPersonLatitude(ClientData.AstroUserId, ClientData.Message.Location.Latitude);
 
-                        ClientData.RedisPersonData.Longitude = ClientData.Message.Location?.Longitude;
-                        ClientData.RedisPersonData.Latitude = ClientData.Message.Location?.Latitude;
+                        ClientData.RedisPersonData.Longitude = ClientData.Message.Location.Longitude;
+                        ClientData.RedisPersonData.Latitude = ClientData.Message.Location.Latitude;
 
-                        var messageText = GetPersonInfoText(Constants.UI.Icons.Common.MOON_FACE);
+                        var message = GetPersonInfoText();
 
-                        await _personDataPicker.SendConfirmDate(
+                        message += ClientData.RedisPersonData.IsUser
+                            ? $"\n\n{Constants.UI.Icons.Common.MOON_3}{_localeManager.GetString("ChooseYourBirthYear", ClientData.AstroUser.CultureInfo)}:"
+                            : $"\n\n{Constants.UI.Icons.Common.MOON_3}{_localeManager.GetString("ChooseBirthYear", ClientData.AstroUser.CultureInfo)}:";
+
+                        await _personDataPicker.SendYearIntervalPicker(
                             ClientData,
-                            messageText);
+                            message);
 
-                        await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.ConfirmBirthday);
+                        await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.YearIntervalPicker);
                     }
                     else
                     {
                         _logger.LogWarning($"Wrong message type for stage {ClientData.ChatStageEnum}.");
                     }
                     return;
-                case ChatStageEnum.PersonNamePicker:
+                case ChatStageEnum.NamePicker:
                     var personName = ClientData.Message.Text;
 
                     var personNamePickerButtons = new InlineKeyboardMarkup(new[]
@@ -188,17 +192,18 @@ namespace AstroTBotService.TBot
                     await _redisService.SetPersonName(ClientData.AstroUserId, personName);
                     ClientData.RedisPersonData.Name = personName;
 
-                    var message = GetPersonInfoText(Constants.UI.Icons.Common.MOON_2);
+                    var locationPickerText = GetPersonInfoText();
 
-                    message += ClientData.RedisPersonData.IsUser
-                        ? $" {_localeManager.GetString("ChooseYourBirthYear", ClientData.AstroUser.CultureInfo)}:"
-                        : $"\n\n{Constants.UI.Icons.Common.BLUE_SMALL_RHOMB}{_localeManager.GetString("ChooseBirthYear", ClientData.AstroUser.CultureInfo)}:";
+                    locationPickerText += ClientData.RedisPersonData.IsUser
+                        ? $"\n\n{Constants.UI.Icons.Common.MOON_2}{_localeManager.GetString("ChooseYourBirthLocation", ClientData.AstroUser.CultureInfo)}"
+                        : $"\n\n{Constants.UI.Icons.Common.MOON_2}{_localeManager.GetString("ChooseBirthLocation", ClientData.AstroUser.CultureInfo)}";
 
-                    await _personDataPicker.SendYearIntervalPicker(
+                    await _personDataPicker.SendLocationPicker(
                         ClientData,
-                        message);
+                        locationPickerText);
 
-                    await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.YearIntervalPicker);
+                    await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.LocationPicker);
+
                     break;
             }
         }
@@ -243,7 +248,7 @@ namespace AstroTBotService.TBot
 
                     _logger.LogInformation("Enter person name message is sent");
                     return;
-                case ChatStageEnum.PersonNamePicker:
+                case ChatStageEnum.NamePicker:
                     await HandleCallbackButtons(
                         Constants.UI.Buttons.Commands.SEND_MENU,
                         Constants.UI.Buttons.Commands.EDIT_TO_MENU,
@@ -266,11 +271,11 @@ namespace AstroTBotService.TBot
                     await _redisService.SetPersonYearInterval(ClientData.AstroUserId, startYear);
                     ClientData.RedisPersonData.StartYearInterval = startYear;
 
-                    var yearPickerText = GetPersonInfoText(Constants.UI.Icons.Common.MOON_2);
+                    var yearPickerText = GetPersonInfoText();
 
                     yearPickerText += ClientData.RedisPersonData.IsUser
-                        ? $" {_localeManager.GetString("ChooseYourBirthYear", ClientData.AstroUser.CultureInfo)}"
-                        : $"\n\n{Constants.UI.Icons.Common.BLUE_SMALL_RHOMB}{_localeManager.GetString("ChooseBirthYear", ClientData.AstroUser.CultureInfo)}";
+                        ? $"\n\n{Constants.UI.Icons.Common.MOON_4}{_localeManager.GetString("ChooseYourBirthYear", ClientData.AstroUser.CultureInfo)}"
+                        : $"\n\n{Constants.UI.Icons.Common.MOON_4}{_localeManager.GetString("ChooseBirthYear", ClientData.AstroUser.CultureInfo)}";
 
                     await _personDataPicker.SendYearPicker(
                         ClientData,
@@ -295,11 +300,11 @@ namespace AstroTBotService.TBot
                     await _redisService.SetPersonYear(ClientData.AstroUserId, year);
                     ClientData.RedisPersonData.Year = year;
 
-                    var monthPickerText = GetPersonInfoText(Constants.UI.Icons.Common.MOON_3);
+                    var monthPickerText = GetPersonInfoText();
 
                     monthPickerText += ClientData.RedisPersonData.IsUser
-                        ? $" {_localeManager.GetString("ChooseYourBirthMonth", ClientData.AstroUser.CultureInfo)}"
-                        : $"\n\n{Constants.UI.Icons.Common.BLUE_SMALL_RHOMB}{_localeManager.GetString("ChooseBirthMonth", ClientData.AstroUser.CultureInfo)}";
+                        ? $"\n\n{Constants.UI.Icons.Common.MOON_5}{_localeManager.GetString("ChooseYourBirthMonth", ClientData.AstroUser.CultureInfo)}"
+                        : $"\n\n{Constants.UI.Icons.Common.MOON_5}{_localeManager.GetString("ChooseBirthMonth", ClientData.AstroUser.CultureInfo)}";
 
                     await _personDataPicker.SendMonthPicker(
                         ClientData,
@@ -323,11 +328,11 @@ namespace AstroTBotService.TBot
                     await _redisService.SetPersonMonth(ClientData.AstroUserId, month);
                     ClientData.RedisPersonData.Month = month;
 
-                    var dayPickerText = GetPersonInfoText(Constants.UI.Icons.Common.MOON_4);
+                    var dayPickerText = GetPersonInfoText();
 
                     dayPickerText += ClientData.RedisPersonData.IsUser
-                        ? $" {_localeManager.GetString("ChooseYourBirthDay", ClientData.AstroUser.CultureInfo)}"
-                        : $"\n\n{Constants.UI.Icons.Common.BLUE_SMALL_RHOMB}{_localeManager.GetString("ChooseBirthDay", ClientData.AstroUser.CultureInfo)}";
+                        ? $"\n\n{Constants.UI.Icons.Common.MOON_6}{_localeManager.GetString("ChooseYourBirthDay", ClientData.AstroUser.CultureInfo)}"
+                        : $"\n\n{Constants.UI.Icons.Common.MOON_6}{_localeManager.GetString("ChooseBirthDay", ClientData.AstroUser.CultureInfo)}";
 
                     await _personDataPicker.SendDayPicker(
                         ClientData,
@@ -352,15 +357,19 @@ namespace AstroTBotService.TBot
                     await _redisService.SetPersonDay(ClientData.AstroUserId, day);
                     ClientData.RedisPersonData.Day = day;
 
-                    var hourPickerText = GetPersonInfoText(Constants.UI.Icons.Common.MOON_5);
+                    var hourPickerText = GetPersonInfoText();
 
                     hourPickerText += ClientData.RedisPersonData.IsUser
-                        ? $"\n\n{_localeManager.GetString("ChooseYourBirthHour", ClientData.AstroUser.CultureInfo)}"
-                        : $"\n\n{Constants.UI.Icons.Common.BLUE_SMALL_RHOMB}{_localeManager.GetString("ChooseBirthHour", ClientData.AstroUser.CultureInfo)}";
+                        ? $"\n\n{Constants.UI.Icons.Common.MOON_7}" +
+                            $"{_localeManager.GetString("ChooseYourBirthHour", ClientData.AstroUser.CultureInfo)}:" +
+                            $"\n({_localeManager.GetString("LocalTime", ClientData.AstroUser.CultureInfo).ToLower()})"
+                        : $"\n\n{Constants.UI.Icons.Common.MOON_7}" +
+                            $"{_localeManager.GetString("ChooseBirthHour", ClientData.AstroUser.CultureInfo)}:" +
+                            $"\n({_localeManager.GetString("LocalTime", ClientData.AstroUser.CultureInfo).ToLower()})";
 
                     await _personDataPicker.SendHourPicker(
                         ClientData,
-                        $"{hourPickerText}:\n");
+                        $"{hourPickerText}\n");
 
                     await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.HourPicker);
                     return;
@@ -381,15 +390,19 @@ namespace AstroTBotService.TBot
                     await _redisService.SetPersonHour(ClientData.AstroUserId, hour);
                     ClientData.RedisPersonData.Hour = hour;
 
-                    var minutePickerText = GetPersonInfoText(Constants.UI.Icons.Common.MOON_6);
+                    var minutePickerText = GetPersonInfoText();
 
                     minutePickerText += ClientData.RedisPersonData.IsUser
-                        ? $"\n\n{_localeManager.GetString("ChooseYourBirthMinute", ClientData.AstroUser.CultureInfo)}"
-                        : $"\n\n{Constants.UI.Icons.Common.BLUE_SMALL_RHOMB}{_localeManager.GetString("ChooseBirthMinute", ClientData.AstroUser.CultureInfo)}";
+                        ? $"\n\n{Constants.UI.Icons.Common.MOON_8}" +
+                            $"{_localeManager.GetString("ChooseYourBirthMinute", ClientData.AstroUser.CultureInfo)}:" +
+                            $"\n({_localeManager.GetString("LocalTime", ClientData.AstroUser.CultureInfo).ToLower()})"
+                        : $"\n\n{Constants.UI.Icons.Common.MOON_8}" +
+                            $"{_localeManager.GetString("ChooseBirthMinute", ClientData.AstroUser.CultureInfo)}:" +
+                            $"\n({_localeManager.GetString("LocalTime", ClientData.AstroUser.CultureInfo).ToLower()})";
 
                     await _personDataPicker.SendMinutePicker(
                         ClientData,
-                        $"{minutePickerText}:");
+                        $"{minutePickerText}");
 
                     await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.MinutePicker);
                     return;
@@ -410,46 +423,31 @@ namespace AstroTBotService.TBot
                     await _redisService.SetPersonMinute(ClientData.AstroUserId, minute);
                     ClientData.RedisPersonData.Minute = minute;
 
-                    var timeZonePickerText = GetPersonInfoText(Constants.UI.Icons.Common.MOON_7);
+                    var birthDateTime = new DateTime(
+                        ClientData.RedisPersonData.Year,
+                        ClientData.RedisPersonData.Month,
+                        ClientData.RedisPersonData.Day,
+                        ClientData.RedisPersonData.Hour,
+                        ClientData.RedisPersonData.Minute,
+                        0);
 
-                    timeZonePickerText += ClientData.RedisPersonData.IsUser
-                        ? $"\n\n{_localeManager.GetString("ChooseYourTimeZone", ClientData.AstroUser.CultureInfo)}"
-                        : $"\n\n{Constants.UI.Icons.Common.BLUE_SMALL_RHOMB}{_localeManager.GetString("ChooseTimeZone", ClientData.AstroUser.CultureInfo)}";
+                    var birthDateTimeOffset = _calculationService.GetDateTimeOffset(
+                        birthDateTime,
+                        ClientData.RedisPersonData.Longitude,
+                        ClientData.RedisPersonData.Latitude);
 
-                    await _personDataPicker.SendTimeZonePicker(
+                    var birthDateTimeOffsetStr = await _redisService.SetPersonDateTimeOffsetStr(ClientData.AstroUserId, birthDateTimeOffset);
+                    ClientData.RedisPersonData.DateTimeOffsetString = birthDateTimeOffsetStr;
+
+
+
+                    var messageText = GetPersonInfoText();
+
+                    await _personDataPicker.EditToConfirmDate(
                         ClientData,
-                        $"{timeZonePickerText}:");
+                        messageText);
 
-                    await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.TimeZonePicker);
-                    return;
-                case ChatStageEnum.TimeZonePicker:
-                    if (await HandleCallbackButtons(
-                        Constants.UI.Buttons.Commands.SEND_MENU,
-                        Constants.UI.Buttons.Commands.EDIT_TO_MENU))
-                    {
-                        return;
-                    }
-
-                    if (!TimeSpan.TryParse(ClientData.CallbackData, out var timeZone))
-                    {
-                        _logger.LogError($"Wrong callback data for stage \"{ClientData.ChatStageEnum}\": {ClientData.CallbackData}");
-                        return;
-                    }
-
-                    await _redisService.SetPersonTimeZone(ClientData.AstroUserId, timeZone);
-                    ClientData.RedisPersonData.TimeZoneMilliseconds = timeZone.TotalMilliseconds;
-
-                    var locationPickerText = GetPersonInfoText(Constants.UI.Icons.Common.MOON_8);
-
-                    locationPickerText += ClientData.RedisPersonData.IsUser
-                        ? $"\n\n{_localeManager.GetString("ChooseYourBirthLocation", ClientData.AstroUser.CultureInfo)}"
-                        : $"\n\n{Constants.UI.Icons.Common.BLUE_SMALL_RHOMB}{_localeManager.GetString("ChooseBirthLocation", ClientData.AstroUser.CultureInfo)}";
-
-                    await SendLocation(
-                        ClientData,
-                        locationPickerText);
-
-                    await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.BirthLocationPicker);
+                    await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.ConfirmBirthday);
                     return;
                 case ChatStageEnum.ConfirmBirthday:
                     await HandleCallbackButtons(
@@ -460,7 +458,7 @@ namespace AstroTBotService.TBot
                         Constants.UI.Buttons.Commands.CHANGE_BIRTH_LOCATION);
 
                     return;
-                case ChatStageEnum.BirthLocationPicker:
+                case ChatStageEnum.LocationPicker:
                     await HandleCallbackButtons(
                         Constants.UI.Buttons.Commands.SEND_MENU,
                         Constants.UI.Buttons.Commands.EDIT_TO_MENU);
@@ -504,19 +502,19 @@ namespace AstroTBotService.TBot
             }
         }
 
-        private string GetPersonInfoText(string birthIcon)
+        private string GetPersonInfoText()
         {
+            var headerString = string.Empty;
             var oldPersonText = string.Empty;
 
-            //UserInfo
+            // Old user info
             if (ClientData.RedisPersonData.EditingPersonType == Constants.UI.Buttons.PersonTypes.USER)
             {
                 var oldUserInfo = ClientData.AstroUser;
 
                 if (oldUserInfo != null)
                 {
-                    oldPersonText = $"{Constants.UI.Icons.Common.MOON_BLACK_FACE} {_localeManager.GetString("You", oldUserInfo.CultureInfo)} " +
-                        $"[{_localeManager.GetString("OldPersonDataForEditing", oldUserInfo.CultureInfo)}]\n" +
+                    oldPersonText = $"{Constants.UI.Icons.Common.MOON_BLACK_FACE} {_localeManager.GetString("OldData", oldUserInfo.CultureInfo)}\n" +
                         $"{_localeManager.GetString("BirthDate", oldUserInfo.CultureInfo)}:\n" +
                         $"{oldUserInfo.DateToLongString(oldUserInfo.CultureInfo)}";
 
@@ -528,16 +526,18 @@ namespace AstroTBotService.TBot
                             $"{_localeManager.GetString("Latitude", oldUserInfo.CultureInfo)}: {oldUserInfo.Latitude.Value.ToString("F6")}\n\n";
                     }
                 }
+
+                headerString = _localeManager.GetString("NewData", ClientData.AstroUser.CultureInfo);
             }
-            //PersonInfo
+            // Old person info
             else if (ClientData.RedisPersonData.EditingPersonType == Constants.UI.Buttons.PersonTypes.PERSON)
             {
                 var oldPersonInfo = ClientData.AstroUser.ChildPersons.FirstOrDefault(p => p.Id == ClientData.RedisPersonData.EditingPersonId);
 
                 if (oldPersonInfo != null)
                 {
-                    oldPersonText = $"{Constants.UI.Icons.Common.MOON_BLACK_FACE} {oldPersonInfo.Name} " +
-                        $"[{_localeManager.GetString("OldPersonDataForEditing", ClientData.AstroUser.CultureInfo)}]\n" +
+                    oldPersonText = $"{Constants.UI.Icons.Common.MOON_BLACK_FACE} {_localeManager.GetString("OldData", ClientData.AstroUser.CultureInfo)}\n" +
+                        $"{_localeManager.GetString("Name", ClientData.AstroUser.CultureInfo)}: {oldPersonInfo.Name}\n" +
                         $"{_localeManager.GetString("BirthDate", ClientData.AstroUser.CultureInfo)}:\n" +
                         $"{oldPersonInfo.DateToLongString(ClientData.AstroUser.CultureInfo)}";
 
@@ -549,17 +549,26 @@ namespace AstroTBotService.TBot
                         $"{_localeManager.GetString("Latitude", ClientData.AstroUser.CultureInfo)}: {oldPersonInfo.Latitude.Value.ToString("F6")}\n\n";
                     }
                 }
+
+                headerString = _localeManager.GetString("NewData", ClientData.AstroUser.CultureInfo);
+            }
+            // New data
+            else
+            {
+                headerString = !string.IsNullOrWhiteSpace(ClientData.RedisPersonData.Name) && !ClientData.RedisPersonData.IsUser
+                    ? ClientData.RedisPersonData.Name
+                    : _localeManager.GetString("You", ClientData.AstroUser.CultureInfo);
             }
 
-            //New Data
+            // New data
             var birthDate = string.Empty;
             var birthTime = string.Empty;
-            var birthMessage = birthIcon;
 
-            if (!string.IsNullOrWhiteSpace(ClientData.RedisPersonData.Name)
-                && !ClientData.RedisPersonData.IsUser)
+            var birthMessage = $"{Constants.UI.Icons.Common.MOON_FACE} {headerString}";
+
+            if (!string.IsNullOrWhiteSpace(ClientData.RedisPersonData.Name))
             {
-                birthMessage += $" {ClientData.RedisPersonData.Name}";
+                birthMessage += $"\n{_localeManager.GetString("Name", ClientData.AstroUser.CultureInfo)}: {ClientData.RedisPersonData.Name}";
             }
 
             if (ClientData.RedisPersonData.Year != 0
@@ -567,43 +576,48 @@ namespace AstroTBotService.TBot
                 && ClientData.RedisPersonData.Day != 0)
             {
                 birthMessage += ClientData.RedisPersonData.IsUser
-                    ? $" {_localeManager.GetString("YourBirthDate", ClientData.AstroUser.CultureInfo)}:\n"
+                    ? $"\n{_localeManager.GetString("YourBirthDate", ClientData.AstroUser.CultureInfo)}:\n"
                     : $"\n{_localeManager.GetString("BirthDate", ClientData.AstroUser.CultureInfo)}:\n";
 
-                birthDate = ClientData.RedisPersonData?.GetDateTime().ToString("d MMMM yyyy", ClientData.AstroUser.CultureInfo);
+                var date = new DateTime(
+                    ClientData.RedisPersonData.Year,
+                    ClientData.RedisPersonData.Month,
+                    ClientData.RedisPersonData.Day,
+                    0, 0, 0);
+
+                birthDate = date.ToString("d MMMM yyyy", ClientData.AstroUser.CultureInfo);
 
                 birthMessage += $"{birthDate}";
-
-                if (ClientData.RedisPersonData.Hour != 0
-                    && ClientData.RedisPersonData.Minute != 0)
-                {
-                    birthTime = ClientData.RedisPersonData?.GetDateTime().ToString("HH:mm", ClientData.AstroUser.CultureInfo);
-                    birthMessage += $" {Constants.UI.Icons.Common.MINUS} {birthTime}";
-                }
             }
 
-            if (ClientData.RedisPersonData.TimeZoneMilliseconds.HasValue)
+            if (!string.IsNullOrWhiteSpace(ClientData.RedisPersonData.DateTimeOffsetString))
             {
-                var gmtSign = ClientData.RedisPersonData?.TimeZoneMilliseconds >= 0 ? "+" : "-";
-                var gmtStr = ClientData.RedisPersonData?.TimeZoneMilliseconds % 3_600_000 == 0 ?
-                    $"[GMT{gmtSign}{Math.Abs(ClientData.RedisPersonData.GetTimeZone().Hours)}]" :
-                    $"[GMT{gmtSign}{Math.Abs(ClientData.RedisPersonData.GetTimeZone().Hours)}:{Math.Abs(ClientData.RedisPersonData.GetTimeZone().Minutes)}]";
+                birthTime = ClientData.RedisPersonData?.GetDateTimeOffset().ToString("HH:mm", ClientData.AstroUser.CultureInfo);
+                birthMessage += $" {Constants.UI.Icons.Common.MINUS} {birthTime}";
+
+                var dateTimeOffset = ClientData.RedisPersonData.GetDateTimeOffset();
+
+                var gmtSign = dateTimeOffset.Offset >= TimeSpan.Zero ? "+" : "-";
+
+                var gmtStr = dateTimeOffset.Offset.Minutes == 0 ?
+                    $"[UTC{gmtSign}{Math.Abs(dateTimeOffset.Offset.Hours)}]" :
+                    $"[UTC{gmtSign}{Math.Abs(dateTimeOffset.Offset.Hours)}:{Math.Abs(dateTimeOffset.Offset.Minutes)}]";
 
                 birthMessage += $" {gmtStr}";
             }
 
-            //New location
             var locationStr = string.Empty;
-            var longitudeStr = string.Empty;
-            var latitudeStr = string.Empty;
 
-            if (ClientData.RedisPersonData.Longitude.HasValue
-                && ClientData.RedisPersonData.Latitude.HasValue)
+            if (ClientData.RedisPersonData.Longitude != 0 && ClientData.RedisPersonData.Latitude != 0)
             {
+                //New location
+                var longitudeStr = string.Empty;
+                var latitudeStr = string.Empty;
+
                 locationStr += "\n\n";
 
-                longitudeStr = ClientData.RedisPersonData?.Longitude.Value.ToString("F6");
-                latitudeStr = ClientData.RedisPersonData?.Latitude.Value.ToString("F6");
+                longitudeStr = ClientData.RedisPersonData?.Longitude.ToString("F6");
+                latitudeStr = ClientData.RedisPersonData?.Latitude.ToString("F6");
 
                 locationStr += $"{Constants.UI.Icons.Common.EARTH} {_localeManager.GetString("Location", ClientData.AstroUser.CultureInfo)}:\n" +
                     $"{_localeManager.GetString("Longitude", ClientData.AstroUser.CultureInfo)}: {longitudeStr}\n" +
@@ -656,23 +670,57 @@ namespace AstroTBotService.TBot
             await _redisService.CreateUserData(ClientData.AstroUserId);
             await _redisService.SetEditingUserId(ClientData.AstroUserId);
 
-            ClientData.RedisPersonData.EditingPersonId = ClientData.AstroUserId;
-            ClientData.RedisPersonData.EditingPersonType = Constants.UI.Buttons.PersonTypes.USER;
+            ClientData.RedisPersonData = new RedisPersonData()
+            {
+                EditingPersonId = ClientData.AstroUserId,
+                EditingPersonType = Constants.UI.Buttons.PersonTypes.USER
+            };
 
-            var oldPersonText = GetPersonInfoText(Constants.UI.Icons.Common.MOON_2);
+            var oldPersonText = GetPersonInfoText();
+
+            oldPersonText += ClientData.RedisPersonData.IsUser
+                ? $"\n\n{Constants.UI.Icons.Common.MOON_2} {_localeManager.GetString("ChooseYourBirthLocation", ClientData.AstroUser.CultureInfo)}"
+                : $"\n\n{Constants.UI.Icons.Common.MOON_2} {_localeManager.GetString("ChooseBirthLocation", ClientData.AstroUser.CultureInfo)}";
 
             if (isSendNewMessage)
             {
-                await _personDataPicker.SendYearIntervalPicker(
+                await _personDataPicker.SendLocationPicker(
                     ClientData,
-                    $"{oldPersonText} {_localeManager.GetString("ChooseYourBirthYear", ClientData.AstroUser.CultureInfo)}:");
+                    oldPersonText);
             }
             else
             {
-                await _personDataPicker.EditToYearIntervalPicker(
+                await _personDataPicker.EditToLocationPicker(
                     ClientData,
-                    $"{oldPersonText} {_localeManager.GetString("ChooseYourBirthYear", ClientData.AstroUser.CultureInfo)}:");
+                    oldPersonText);
             }
+
+            await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.LocationPicker);
+        }
+
+        private async Task BeginEditingPerson(long personId, bool isSendNewMessage)
+        {
+            await _redisService.CreatePersonDataForEdit(ClientData.AstroUserId, personId);
+            await _redisService.SetEditingPersonId(ClientData.AstroUserId, personId);
+
+            ClientData.RedisPersonData = new RedisPersonData()
+            {
+                EditingPersonId = personId,
+                EditingPersonType = Constants.UI.Buttons.PersonTypes.PERSON
+            };
+
+            var oldPersonText = GetPersonInfoText();
+
+            if (isSendNewMessage)
+            {
+                await _personDataPicker.SendNamePicker(ClientData, oldPersonText);
+            }
+            else
+            {
+                await _personDataPicker.EditToNamePicker(ClientData, oldPersonText);
+            }
+
+            await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.NamePicker);
         }
 
         private async Task HandlePersonsButtons()
@@ -727,35 +775,10 @@ namespace AstroTBotService.TBot
                     if (userPrefix == Constants.UI.Buttons.PersonTypes.USER)
                     {
                         await BeginEditingUser(false);
-
-                        await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.YearIntervalPicker);
                     }
                     else if (userPrefix == Constants.UI.Buttons.PersonTypes.PERSON)
                     {
-                        await _redisService.CreatePersonDataForEdit(ClientData.AstroUserId, id);
-
-                        var editPersonKeyboard = new InlineKeyboardMarkup(new[]
-                        {
-                            new []
-                            {
-                                _clientHelper.GetBackToPersonsButton(ClientData),
-                                _clientHelper.GetCancelButtonWithEdit(ClientData)
-                            }
-                        });
-
-                        await _redisService.SetEditingPersonId(ClientData.AstroUserId, id);
-                        ClientData.RedisPersonData.EditingPersonId = id;
-                        ClientData.RedisPersonData.EditingPersonType = userPrefix;
-
-                        var oldPersonText = GetPersonInfoText(Constants.UI.Icons.Common.MOON_1);
-
-                        await _clientHelper.EditMessage(
-                            ClientData.AstroUserId,
-                            ClientData.Message.Id,
-                            $"{oldPersonText} {_localeManager.GetString("EnterPersonName", ClientData.AstroUser.CultureInfo)}:",
-                            editPersonKeyboard);
-
-                        await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.PersonNamePicker);
+                        await BeginEditingPerson(id, false);
                     }
 
                     return;
@@ -834,8 +857,7 @@ namespace AstroTBotService.TBot
                     _logger.LogInformation("Persons button handling.");
 
                     if (ClientData.AstroUser == null ||
-                        ClientData.AstroUser?.BirthDate == null ||
-                        ClientData.AstroUser?.TimeZoneOffset == null)
+                        ClientData.AstroUser?.UtcBirthDate == null)
                     {
                         _logger.LogError("Empty user info error.");
 
@@ -850,12 +872,26 @@ namespace AstroTBotService.TBot
                     _logger.LogInformation("Getting persons message is sent.");
 
                     return true;
+                case Constants.UI.Buttons.Commands.ADD_USER:
+                    await _redisService.CreateUserData(ClientData.AstroUserId);
+
+                    var locationPickerText = GetPersonInfoText();
+
+                    locationPickerText += ClientData.RedisPersonData.IsUser
+                        ? $"\n\n{_localeManager.GetString("ChooseYourBirthLocation", ClientData.AstroUser.CultureInfo)}"
+                        : $"\n\n{Constants.UI.Icons.Common.MOON_2}{_localeManager.GetString("ChooseBirthLocation", ClientData.AstroUser.CultureInfo)}";
+
+                    await _personDataPicker.SendLocationPicker(
+                        ClientData,
+                        locationPickerText);
+
+                    await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.LocationPicker);
+                    break;
                 case Constants.UI.Buttons.Commands.ADD_PERSON:
                     _logger.LogInformation("Add person button handling.");
 
                     if (ClientData.AstroUser == null ||
-                        ClientData.AstroUser?.BirthDate == null ||
-                        ClientData.AstroUser?.TimeZoneOffset == null)
+                        ClientData.AstroUser?.UtcBirthDate == null)
                     {
                         _logger.LogError("Empty user info error.");
 
@@ -882,26 +918,9 @@ namespace AstroTBotService.TBot
                         return true;
                     }
 
-                    var namePickerText = ClientData.RedisPersonData.IsUser
-                        ? $"{Constants.UI.Icons.Common.MOON_1} {_localeManager.GetString("EnterYourPersonName", ClientData.AstroUser.CultureInfo)}"
-                        : $"{Constants.UI.Icons.Common.MOON_1} {_localeManager.GetString("EnterPersonName", ClientData.AstroUser.CultureInfo)}";
+                    await _personDataPicker.EditToNamePicker(ClientData, string.Empty);
 
-                    var addPersonKeyboard = new InlineKeyboardMarkup(new[]
-                    {
-                        new []
-                        {
-                            _clientHelper.GetBackToPersonsButton(ClientData),
-                            _clientHelper.GetCancelButtonWithEdit(ClientData)
-                        }
-                    });
-
-                    await _clientHelper.EditMessage(
-                        ClientData.AstroUserId,
-                        ClientData.Message.Id,
-                        $"{namePickerText}:",
-                        addPersonKeyboard);
-
-                    await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.PersonNamePicker);
+                    await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.NamePicker);
 
                     _logger.LogInformation("Enter person name message is sent.");
                     return true;
@@ -933,8 +952,7 @@ namespace AstroTBotService.TBot
                     _logger.LogInformation("Natal chart button handling.");
 
                     if (natalPerson == null ||
-                        natalPerson.BirthDate == null ||
-                        natalPerson.TimeZoneOffset == null)
+                        natalPerson.UtcBirthDate == null)
                     {
                         _logger.LogError("Empty person info error.");
                         return true;
@@ -950,8 +968,7 @@ namespace AstroTBotService.TBot
                     }
 
                     var birthChart = await _calculationService.GetChartInfo(
-                        natalPerson.BirthDate.Value,
-                        natalPerson.TimeZoneOffset.Value,
+                        natalPerson.LocalDateTimeOffset,
                         natalPerson.Longitude.Value,
                         natalPerson.Latitude.Value,
                         ClientData.AstroUser.HouseSystem);
@@ -989,8 +1006,7 @@ namespace AstroTBotService.TBot
                     _logger.LogInformation("Transit daily forecast button handling.");
 
                     if (transitPerson == null ||
-                        transitPerson.BirthDate == null ||
-                        transitPerson.TimeZoneOffset == null)
+                        transitPerson.UtcBirthDate == null)
                     {
                         _logger.LogError("Empty user info error.");
                         return true;
@@ -1013,8 +1029,7 @@ namespace AstroTBotService.TBot
                     }
 
                     var transitAspects = await _calculationService.GetTransitAspects(
-                        transitPerson.BirthDate.Value,
-                        transitPerson.TimeZoneOffset.Value,
+                        transitPerson.LocalDateTimeOffset,
                         utcNowDate,
                         transitInterval,
                         transitPerson.Longitude.Value,
@@ -1035,8 +1050,7 @@ namespace AstroTBotService.TBot
                     _logger.LogInformation("Direction forecast button handling.");
 
                     if (ClientData.AstroUser == null ||
-                        ClientData.AstroUser?.BirthDate == null ||
-                        ClientData.AstroUser?.TimeZoneOffset == null)
+                        ClientData.AstroUser?.UtcBirthDate == null)
                     {
                         _logger.LogError("Empty user info error.");
                         return true;
@@ -1044,8 +1058,7 @@ namespace AstroTBotService.TBot
 
                     _logger.LogInformation("Getting direction aspects info.");
 
-                    if (!directionPerson.BirthDate.HasValue
-                        || !directionPerson.TimeZoneOffset.HasValue
+                    if (!directionPerson.UtcBirthDate.HasValue
                         || !directionPerson.Longitude.HasValue
                         || !directionPerson.Latitude.HasValue)
                     {
@@ -1054,8 +1067,7 @@ namespace AstroTBotService.TBot
                     }
 
                     var directionAspects = await _calculationService.GetDirectionAspects(
-                        directionPerson.BirthDate.Value,
-                        directionPerson.TimeZoneOffset.Value,
+                        directionPerson.LocalDateTimeOffset,
                         utcNowDate,
                         directionPerson.Longitude.Value,
                         directionPerson.Latitude.Value,
@@ -1075,22 +1087,12 @@ namespace AstroTBotService.TBot
                 case Constants.UI.Buttons.Commands.SET_BIRTH_LOCATION:
                     _logger.LogInformation("Set birth location button handling.");
 
-                    await SendLocation(
+                    await _personDataPicker.SendLocationPicker(
                         ClientData,
                         $"\n\n{Constants.UI.Icons.Common.EARTH}{_localeManager.GetString("ChooseBirthLocation", ClientData.AstroUser.CultureInfo)}");
 
-                    await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.BirthLocationPicker);
+                    await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.LocationPicker);
                     return true;
-                case Constants.UI.Buttons.Commands.ADD_USER:
-                    await _redisService.CreateUserData(ClientData.AstroUserId);
-
-                    await _personDataPicker.EditToYearIntervalPicker(
-                        ClientData,
-                        $"{Constants.UI.Icons.Common.BLUE_SMALL_RHOMB}{_localeManager.GetString("ChooseBirthYear", ClientData.AstroUser.CultureInfo)}:");
-
-                    await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.YearIntervalPicker);
-                    break;
-
                 case Constants.UI.Buttons.Commands.SAVE_BIRTHDAY:
                     var person = await _redisService.GetPersonData(ClientData.AstroUserId);
 
@@ -1117,11 +1119,15 @@ namespace AstroTBotService.TBot
                     await _redisService.DeletePersonData(ClientData.AstroUserId);
                     return true;
                 case Constants.UI.Buttons.Commands.CHANGE_BIRTHDAY:
-                    await _personDataPicker.SendYearPicker(
-                        ClientData,
-                        $"{Constants.UI.Icons.Common.BLUE_SMALL_RHOMB}{_localeManager.GetString("ChooseBirthYear", ClientData.AstroUser.CultureInfo)}:");
+                    if (ClientData.RedisPersonData.IsUser)
+                    {
+                        await BeginEditingUser(false);
+                    }
+                    else
+                    {
+                        await BeginEditingPerson(ClientData.RedisPersonData.EditingPersonId, false);
+                    }
 
-                    await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.YearPicker);
                     return true;
                 default:
                     return false;
@@ -1201,8 +1207,6 @@ namespace AstroTBotService.TBot
                 {
                     Id = chatId,
                     Name = userName,
-                    BirthDate = null,
-                    TimeZoneOffset = null,
                     Language = defaultLanguage,
                     HouseSystem = HouseSystemEnum.Placidus
                 };
@@ -1212,14 +1216,14 @@ namespace AstroTBotService.TBot
             else
             {
                 _logger.LogInformation($"User info is received.");
-                                
-                if (!string.IsNullOrWhiteSpace(userName) && 
+
+                if (!string.IsNullOrWhiteSpace(userName) &&
                     (string.IsNullOrWhiteSpace(astroUser.Name) || astroUser.Name != userName))
                 {
                     _logger.LogInformation($"Updating user name from '{astroUser.Name}' to '{userName}'");
                     astroUser.Name = userName;
 
-                    await _userProvider.UpdateUserName(astroUser.Id.Value, userName);
+                    await _userProvider.EditUserName(astroUser.Id.Value, userName);
                 }
             }
 
@@ -1244,41 +1248,26 @@ namespace AstroTBotService.TBot
 
         private async Task SetBirthday()
         {
-            _logger.LogInformation("Sending year interval picker.");
-
             var isNewUser = await _userProvider.IsNewUser(ClientData.AstroUserId);
 
             if (isNewUser)
             {
                 await _redisService.CreateUserData(ClientData.AstroUserId);
 
-                await _personDataPicker.SendYearIntervalPicker(
+                var personText = ClientData.RedisPersonData.IsUser
+                    ? $"\n\n{Constants.UI.Icons.Common.MOON_2}{_localeManager.GetString("ChooseYourBirthLocation", ClientData.AstroUser.CultureInfo)}"
+                    : $"\n\n{Constants.UI.Icons.Common.MOON_2}{_localeManager.GetString("ChooseBirthLocation", ClientData.AstroUser.CultureInfo)}";
+
+                await _personDataPicker.SendLocationPicker(
                     ClientData,
-                    $"{Constants.UI.Icons.Common.BLUE_SMALL_RHOMB}{_localeManager.GetString("ChooseBirthYear", ClientData.AstroUser.CultureInfo)}:");
+                    personText);
             }
             else
             {
                 await BeginEditingUser(true);
             }
 
-            await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.YearIntervalPicker);
-        }
-
-        private async Task SendLocation(TBotClientData clientData, string text)
-        {
-            var inlineKeyboard = new InlineKeyboardMarkup(new[]
-            {
-                new []
-                {
-                    _clientHelper.GetCancelButtonWithEdit(clientData)
-                }
-            });
-
-            await _botClient.EditMessageText(
-                chatId: clientData.AstroUserId,
-                messageId: clientData.Message.Id,
-                text: text,
-                replyMarkup: inlineKeyboard);
+            await _userProvider.SetUserStage(ClientData.AstroUserId, ChatStageEnum.LocationPicker);
         }
     }
 }

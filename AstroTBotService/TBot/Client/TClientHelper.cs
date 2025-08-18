@@ -214,7 +214,7 @@ namespace AstroTBotService.TBot
 
             var person = clientData.AstroUser.GetChosenPerson();
 
-            if (person.BirthDate == null)
+            if (person.UtcBirthDate == null)
             {
                 message = $"{Constants.UI.Icons.Common.SCIENCE} {_localeManager.GetString("FillYourBirthDate", cultureInfo)}.";
 
@@ -247,9 +247,9 @@ namespace AstroTBotService.TBot
 
                 }
 
-                message += $"\n\n{_localeManager.GetString("YouCanCalculate", cultureInfo)}.";
+                message += $"\n\n{Constants.UI.Icons.Common.SETTING} {_localeManager.GetString("YouCanChangeConfig", cultureInfo)}.";
 
-                message += $"\n{_localeManager.GetString("YouCanChangeConfig", cultureInfo)}.";
+                message += $"\n\n{Constants.UI.Icons.Common.INFO} {_localeManager.GetString("YouCanCalculate", cultureInfo)}.";
 
                 var personsButton = new[]
                 {
