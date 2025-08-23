@@ -1173,8 +1173,8 @@ namespace AstroTBotService.TBot
 
         public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
         {
-            //TODO
-            throw new NotImplementedException();
+            _logger.LogError(exception, $"Update handling error. Source: {source}");
+            await Task.CompletedTask;
         }
 
         private async Task<AstroUser> GetOrCreateUser(Update update)

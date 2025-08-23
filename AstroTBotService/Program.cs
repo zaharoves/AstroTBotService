@@ -40,7 +40,7 @@ namespace AstroTBotService
                 if (string.IsNullOrWhiteSpace(telegramConfig?.ApiKey))
                 {
                     Console.WriteLine("EMPTY TELEGRAM API KEY!");
-                    return;
+                    throw new InvalidOperationException("EMPTY TELEGRAM API KEY");
                 }
 
                 _telegramBotClient = new TelegramBotClient(telegramConfig.ApiKey);
@@ -48,14 +48,7 @@ namespace AstroTBotService
                 services.AddSingleton(provider => _telegramBotClient);
                 services.AddSingleton<IResourcesLocaleManager, ResourcesLocaleManager>();
 
-                var astroConfig = hostContext.Configuration.GetSection(AstroCalculationConfig.ConfigKey).Get<AstroCalculationConfig>();
-
-                if (astroConfig == null)
-                {
-                    astroConfig = new AstroCalculationConfig();
-                }
-
-                services.AddAstroCalculation(config => config = astroConfig);
+                services.AddAstroCalculation();
 
                 services.AddScoped<IUserProvider, UserProvider>();
 
@@ -66,12 +59,27 @@ namespace AstroTBotService
                 services.AddDbContext<ApplicationContext>((serviceProvider, optionsBuilder) =>
                 {
                     var postgresOptions = serviceProvider.GetRequiredService<IOptions<PostgresConfig>>().Value;
+                    if (string.IsNullOrWhiteSpace(postgresOptions.ConnectionString))
+                    {
+                        Console.WriteLine("EMPTY POSTGRES CONNECTION STRING!");
+                        throw new InvalidOperationException("EMPTY POSTGRES CONNECTION STRING");
+                    }
                     optionsBuilder.UseNpgsql(postgresOptions.ConnectionString);
 
-                    optionsBuilder.EnableSensitiveDataLogging();
+                    if (!hostContext.HostingEnvironment.IsProduction())
+                    {
+                        optionsBuilder.EnableSensitiveDataLogging();
+                    }
                 });
 
                 var redisConfig = hostContext.Configuration.GetSection(RedisConfig.ConfigKey).Get<RedisConfig>();
+
+                if (string.IsNullOrWhiteSpace(redisConfig?.ConnectionString))
+                {
+                    Console.WriteLine("EMPTY REDIS CONNECTION STRING!");
+                    throw new InvalidOperationException("EMPTY REDIS CONNECTION STRING");
+                }
+
                 services.AddSingleton<IConnectionMultiplexer>(sp =>
                 {
                     return ConnectionMultiplexer.Connect(redisConfig.ConnectionString);
@@ -105,14 +113,17 @@ namespace AstroTBotService
                 };
 
                 configuration
-                    .Enrich.FromLogContext()
-                    //.MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Error)
-                    .WriteTo.PostgreSQL(
+                    .Enrich.FromLogContext();
+
+                if (!string.IsNullOrWhiteSpace(serilogOptions?.ConnectionString) && !string.IsNullOrWhiteSpace(serilogOptions?.TableName))
+                {
+                    configuration.WriteTo.PostgreSQL(
                         serilogOptions.ConnectionString,
                         serilogOptions.TableName,
                         needAutoCreateTable: true,
                         columnOptions: columnOptions
                     );
+                }
 
 
                 //if (context.HostingEnvironment.IsProduction() == false)
@@ -123,8 +134,16 @@ namespace AstroTBotService
             // Test connections
             await TestConnections(host);
 
-            var me = await _telegramBotClient.GetMe();
-            Console.WriteLine($"Start listening for @{me.Username}");
+            if (_telegramBotClient == null)
+            {
+                Console.WriteLine("Telegram bot client is not initialized!");
+                throw new InvalidOperationException("Telegram bot client is not initialized");
+            }
+            else 
+            {
+                var me = await _telegramBotClient.GetMe();
+                Console.WriteLine($"Start listening for @{me.Username}");
+            }
 
             await host.RunAsync();
         }

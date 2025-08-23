@@ -4,7 +4,6 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types.Enums;
 using AstroTBotService.Redis;
 using System.Globalization;
-using static Telegram.Bot.TelegramBotClient;
 
 namespace AstroTBotService.TBot
 {
@@ -54,7 +53,7 @@ namespace AstroTBotService.TBot
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogError("Bot is stopping.");
+            _logger.LogInformation("Bot is stopping.");
 
             _cts?.Cancel();
             _cts?.Dispose();
@@ -99,7 +98,7 @@ namespace AstroTBotService.TBot
             var task = Task.Run(async () =>
                 {
                     using (var scope = _host.Services.CreateScope())
-                    using (_logger.BeginScope("user_chat_id: {user_chat_id}", chatIdStr))
+                    using (_logger.BeginScope(new Dictionary<string, object> { { "user_chat_id", chatIdStr } }))
                     {
                         try
                         {

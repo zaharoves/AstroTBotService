@@ -49,6 +49,8 @@ namespace AstroTBotService.Db.Entities
             }
         }
 
+        [NotMapped]
+        public DateTime LocalDateTime => LocalDateTimeOffset.DateTime.Add(LocalDateTimeOffset.Offset);
 
         public double? Longitude { get; set; }
         public double? Latitude { get; set; }
@@ -118,7 +120,7 @@ namespace AstroTBotService.Db.Entities
                 timeZoneString = $"{timeZoneSign}{hoursStr}:{timeZoneMinutes}";
             }
 
-            return $"{dateTimeOffset.DateTime.ToString(dateFormat +
+            return $"{LocalDateTime.ToString(dateFormat +
                 $"{Constants.UI.Icons.Common.MINUS}  " +
                 "HH:mm", cultureInfo)} [UTC{timeZoneString}]";
         }
